@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
+import json
 
-def parse_pom(pom_file):
+def parse_pom(pom_file, output_file):
     try:
         tree = ET.parse(pom_file)
         root = tree.getroot()
@@ -14,19 +15,33 @@ def parse_pom(pom_file):
 
     namespaces = {'mvn': 'http://maven.apache.org/POM/4.0.0'}
 
-    dependencies = root.find('mvn:dependencies', namespaces)
+    dependencies_element = root.find('mvn:dependencies', namespaces)
     
-    if dependencies is None:
+    if dependencies_element is None:
         print("No dependencies found in the pom.xml file.")
         return
     
-    for dependency in dependencies.findall('mvn:dependency', namespaces):
+    dependencies = []
+    
+    for dependency in dependencies_element.findall('mvn:dependency', namespaces):
         group_id = dependency.find('mvn:groupId', namespaces).text
         artifact_id = dependency.find('mvn:artifactId', namespaces).text
-        version = dependency.find('mvn:version', namespaces).text
-        print(f"Group ID: {group_id}, Artifact ID: {artifact_id}, Version: {version}")
+        version_element = dependency.find('mvn:version', namespaces)
+        version = version_element.text if version_element is not None else "LATEST"
+        
+        dependencies.append({
+            "group_id": group_id,
+            "artifact_id": artifact_id,
+            "version": version
+        })
+    
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump({"dependencies": dependencies}, f, indent=4)
+    
+    print(f"Dependencies written to {output_file}")
 
 # Example usage
 if __name__ == "__main__":
     pom_file_path = "pom.xml"
-    parse_pom(pom_file_path)
+    output_file_path = "dependencies.json"
+    parse_pom(pom_file_path, output_file_path)
