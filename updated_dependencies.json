@@ -1,0 +1,19 @@
+{
+    "dependencies": [
+        {
+            "group_id": "org.springframework.boot",
+            "artifact_id": "spring-boot-starter-web",
+            "version": "3.4.3"
+        },
+        {
+            "group_id": "com.fasterxml.jackson.core",
+            "artifact_id": "jackson-databind",
+            "version": "2.18.2"
+        },
+        {
+            "group_id": "org.apache.commons",
+            "artifact_id": "commons-lang3",
+            "version": "3.17.0"
+        }
+    ]
+}
