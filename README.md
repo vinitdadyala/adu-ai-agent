@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Installation
 
 ## 1. Install Visual Studio Code
@@ -270,4 +269,3 @@ If the API key is valid, the script should confirm a successful connection to th
 Question: What is the color of the sky?
 Predicted Answer: Blue on a sunny day
 ```
->>>>>>> e9f4c5f313f3dd1e140b37e0cb8f2b3e51a63cca
