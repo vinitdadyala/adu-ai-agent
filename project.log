@@ -18,3 +18,23 @@
         "version": "3.9"
     }
 ]
+2025-03-05 11:49:21,489 - INFO - Successfully read the file: pom.xml
+2025-03-05 11:49:24,873 - INFO - Updated dependencies saved to input_prompt.json
+2025-03-05 11:54:45,073 - INFO - Analyzing dependency: spring-boot-starter-web
+2025-03-05 11:54:45,073 - INFO - 
+LiteLLM completion() model= llama3-70b-8192; provider = groq
+2025-03-05 11:54:47,513 - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-05 11:54:47,529 - INFO - Wrapper: Completed Call, calling success_handler
+2025-03-05 11:54:47,532 - INFO - Analyzing dependency: jackson-databind
+2025-03-05 11:54:47,534 - INFO - 
+LiteLLM completion() model= llama3-70b-8192; provider = groq
+2025-03-05 11:54:49,368 - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-05 11:54:49,368 - INFO - Wrapper: Completed Call, calling success_handler
+2025-03-05 11:54:49,368 - INFO - Analyzing dependency: commons-lang3
+2025-03-05 11:54:49,368 - INFO - 
+LiteLLM completion() model= llama3-70b-8192; provider = groq
+2025-03-05 11:54:51,380 - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2025-03-05 11:54:51,380 - INFO - Wrapper: Completed Call, calling success_handler
+2025-03-05 11:55:45,793 - INFO - Analyzing dependency: spring-boot-starter-web
+2025-03-05 11:55:45,802 - INFO - Analyzing dependency: jackson-databind
+2025-03-05 11:55:45,806 - INFO - Analyzing dependency: commons-lang3
