@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 import json
 import logging
 import os
+import streamlit as st
 
 LOG_FILE = "project.log"
 
@@ -14,17 +15,13 @@ logging.basicConfig(
     ]
 )
 
-def parse_pom(pom_file, output_file=None):
-    """Parses a pom.xml file and extracts dependencies."""
-    
-    if not os.path.exists(pom_file):
-        logging.error(f"File not found: {pom_file}")
-        return None
+def parse_pom(file_content):
+    """Parses the uploaded pom.xml file and extracts dependencies."""
 
     try:
-        tree = ET.parse(pom_file)
+        tree = ET.ElementTree(ET.fromstring(file_content))
         root = tree.getroot()
-        logging.info(f"Successfully read the file: {pom_file}")
+        logging.info(f"Successfully read the file")
     except ET.ParseError as e:
         logging.error(f"Error parsing the file: {e}")
         return None
@@ -52,17 +49,32 @@ def parse_pom(pom_file, output_file=None):
                 "version": version_element.text if version_element is not None else "LATEST"
             })
 
-    if output_file:
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump({"dependencies": dependencies}, f, indent=4)
-        logging.info(f"Dependencies written to {output_file}")
-
     return dependencies 
 
-if __name__ == "__main__":
-    pom_file_path = "pom.xml"
-    output_file_path = "dependencies.json"
-    
-    result = parse_pom(pom_file_path, output_file_path)
-    if result:
-        logging.info("Final output:\n" + json.dumps(result, indent=4))
+# Streamlit UI
+st.title("POM Dependency Analyzer")
+st.write("Upload your `pom.xml` file to extract dependencies.")
+
+uploaded_file = st.file_uploader("Upload POM File", type=["xml"])
+
+if uploaded_file is not None:
+    file_content = uploaded_file.getvalue().decode("utf-8")  # Read XML content as string
+    dependencies = parse_pom(file_content)
+
+    if dependencies:
+        st.success("Dependencies extracted successfully!")
+        
+        # Display dependencies in a table
+        st.write("### Extracted Dependencies:")
+        st.table(dependencies)
+
+        # Provide JSON download option
+        json_data = json.dumps({"dependencies": dependencies}, indent=4)
+        st.download_button(
+            label="Download Dependencies as JSON",
+            data=json_data,
+            file_name="dependencies.json",
+            mime="application/json",
+        )
+    else:
+        st.error("No dependencies found in the uploaded file or the file is invalid.")
