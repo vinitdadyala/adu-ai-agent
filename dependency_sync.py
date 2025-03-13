@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import requests
+from Dependency import Dependency
 
 LOG_FILE = "project.log"
 
@@ -15,20 +16,16 @@ logging.basicConfig(
     ]
 )
 
-def parse_pom(pom_file):
-    """Parses a pom.xml file and extracts dependencies."""
-    
-    if not os.path.exists(pom_file):
-        logging.error(f"File not found: {pom_file}")
-        return {}
+def parse_pom(file_content):
+    """Parses the uploaded pom.xml file and extracts dependencies."""
 
     try:
-        tree = ET.parse(pom_file)
+        tree = ET.ElementTree(ET.fromstring(file_content))
         root = tree.getroot()
-        logging.info(f"Successfully read the file: {pom_file}")
+        logging.info(f"Successfully read the file")
     except ET.ParseError as e:
         logging.error(f"Error parsing the file: {e}")
-        return {}
+        return None
 
     namespace = root.tag.split('}')[0].strip('{') if '}' in root.tag else ''
     ns = {'mvn': namespace} if namespace else {}
@@ -37,9 +34,9 @@ def parse_pom(pom_file):
 
     if dependencies_element is None:
         logging.warning("No dependencies found in the pom.xml file.")
-        return {}
+        return None
 
-    dependencies = {}
+    dependencies = []
 
     for dependency in dependencies_element.findall('mvn:dependency', ns):
         group_id = dependency.find('mvn:groupId', ns)
@@ -47,14 +44,13 @@ def parse_pom(pom_file):
         version_element = dependency.find('mvn:version', ns)
 
         if group_id is not None and artifact_id is not None:
-            artifact_key = artifact_id.text
-            dependencies[artifact_key] = {
+            dependencies.append({
                 "group_id": group_id.text,
-                "current_version": version_element.text if version_element is not None else "LATEST",
-                "latest_version": None  # Placeholder for latest version
-            }
+                "artifact_id": artifact_id.text,
+                "version": version_element.text if version_element is not None else "LATEST"
+            })
 
-    return dependencies
+    return dependencies 
 
 def get_latest_maven_version(group_id, artifact_id):
     """Fetch the latest version of a dependency from Maven Central."""
@@ -72,24 +68,25 @@ def get_latest_maven_version(group_id, artifact_id):
 
     return None
 
-def update_dependencies(pom_file, output_file="input_prompt.json"):
-    dependencies = parse_pom(pom_file)
+def update_dependencies(file_content):
+    
+    pom_dependencies = parse_pom(file_content)
+    dependency_map = {}
 
-    if not dependencies:
+    if not pom_dependencies:
         logging.error("No dependencies found to update.")
-        return
+        return pom_dependencies
+    
+    for dep in pom_dependencies:
+        latest_version = get_latest_maven_version(dep["group_id"], dep["artifact_id"])
+        # print(f"latest_version::: {latest_version}")
+        if latest_version:
+            dependencies_obj = Dependency(dep["group_id"], dep["artifact_id"], dep["version"], latest_version)
+            dependency_map[dep["artifact_id"]] = dependencies_obj
+            dep["version"] = latest_version  # Add the latest version to the JSON
 
-    for artifact, details in dependencies.items():
-        latest_version = get_latest_maven_version(details["group_id"], artifact)
-        details["latest_version"] = latest_version if latest_version else "UNKNOWN"
+    # for artifact, details in dependencies:
+    #     latest_version = get_latest_maven_version(details["group_id"], artifact)
+    #     details["latest_version"] = latest_version if latest_version else "UNKNOWN"
 
-    with open(output_file, "w", encoding="utf-8") as file:
-        json.dump(dependencies, file, indent=4)
-
-    logging.info(f"Updated dependencies saved to {output_file}")
-
-if __name__ == "__main__":
-    pom_file_path = "pom.xml"
-    output_file_path = "input_prompt.json"  # Output file name
-
-    update_dependencies(pom_file_path, output_file_path)
+    return dependency_map

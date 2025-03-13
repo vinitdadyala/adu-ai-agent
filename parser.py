@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import streamlit as st
+import analyze_dependencies as ad
 
 LOG_FILE = "project.log"
 
@@ -76,5 +77,15 @@ if uploaded_file is not None:
             file_name="dependencies.json",
             mime="application/json",
         )
+        if st.button("Analyze Dependencies Variations"):
+            insights = ad.generateDelta()
+        
+            st.write("\n **Dependency Analysis Report:**\n")
+            for artifact, analysis in insights.items():
+                st.write(f"🔹 **{artifact}**\n")
+                st.write(f"   🔹 Security Changes: {analysis['security_changes']}\n")
+                st.write(f"   🔹 Deprecated Methods: {analysis['deprecated_methods']}\n")
+                st.write(f"   🔹 Code Changes: {analysis['code_changes']}\n")
+
     else:
         st.error("No dependencies found in the uploaded file or the file is invalid.")

@@ -57,10 +57,17 @@ def generate_dependency_insights(dependencies):
     """Calls DSPy LLM to fetch insights for each dependency."""
     insights = {}
 
-    for artifact, details in dependencies.items():
+    # for artifact, details in dependencies:
+    #     dependency_info = (
+    #         f"Artifact: {artifact}, Group ID: {details['group_id']}, "
+    #         f"Current Version: {details['current_version']}, Latest Version: {details['latest_version']}"
+    #     )
+    for artifact, dep in dependencies.items():
+        details = dep
+        # print(f"Artifact: {artifact}, Group ID: {dep.group_id}, Current Version: {dep.current_version}, Latest Version: {dep.latest_version}")
         dependency_info = (
-            f"Artifact: {artifact}, Group ID: {details['group_id']}, "
-            f"Current Version: {details['current_version']}, Latest Version: {details['latest_version']}"
+            f"Artifact: {artifact}, Group ID: {dep.group_id}, "
+            f"Current Version: {dep.current_version}, Latest Version: {dep.latest_version}"
         )
 
         logging.info(f"Analyzing dependency: {artifact}")
@@ -73,6 +80,7 @@ def generate_dependency_insights(dependencies):
             "deprecated_methods": response.deprecated_methods,
             "code_changes": response.code_changes
         }
+        # print(f"insights: {insights}")
 
     return insights
 
@@ -95,3 +103,21 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def generateDelta(dependencies):
+    # dependencies = read_input_prompt()
+    print(f"dependencies: {dependencies}")
+    if not dependencies:
+        logging.error("No dependencies found to analyze.")
+        return
+
+    insights = generate_dependency_insights(dependencies)
+
+    # print("\n **Dependency Analysis Report:**\n")
+    # for artifact, analysis in insights.items():
+    #     print(f"🔹 **{artifact}**\n")
+    #     print(f"   🔹 Security Changes: {analysis['security_changes']}\n")
+    #     print(f"   🔹 Deprecated Methods: {analysis['deprecated_methods']}\n")
+    #     print(f"   🔹 Code Changes: {analysis['code_changes']}\n")
+
+    return insights
