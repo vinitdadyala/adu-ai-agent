@@ -99,7 +99,7 @@ This script is responsible for parsing an XML file and printing structured depen
 #### Usage:  
 Run the script using:  
 ```sh
-python parser.py
+streamlit run parser.py
 ```
 Make sure the required XML file is present in the expected location.
 
