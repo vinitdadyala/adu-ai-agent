@@ -94,14 +94,19 @@ The virtual environment is now set up and ready for use.
 This repository contains two main Python scripts:  
 
 ### 1️⃣ `parser.py`  
-This script is responsible for parsing an XML file and printing structured dependency details in the console.
+Parse an uploaded XML (valid pox.xml) file to structured dependency details in JSON Format.
 
 #### Usage:  
 Run the script using:  
 ```sh
 streamlit run parser.py
 ```
-Make sure the required XML file is present in the expected location.
+
+1. UI when there are no depedencies <br />
+<img width="432" alt="image" src="https://github.com/user-attachments/assets/49ebc0a3-d77f-4855-98ae-72eaed1ab384" />
+<br />
+2. UI when there are dependencies <br />
+<img width="432" alt="image" src="https://github.com/user-attachments/assets/15e82601-829e-4c89-afad-6d8ebc68ac36" />
 
 ### 2️⃣ `sample.py`  
 This script uses the Groq API key and the `dspy` library to establish a connection with an LLM.  
