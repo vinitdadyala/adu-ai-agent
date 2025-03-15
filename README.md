@@ -1,12 +1,9 @@
-# Project Files Overview  
+# Usage
 
-This repository contains two main Python scripts:  
+#### Pre-requisites: Follow this [Setup Guide](https://github.com/vinitdadyala/adu-ai-agent/blob/main/SETUP.md)
 
 ### 1️⃣ `parser.py`  
 Parse an uploaded XML (valid pox.xml) file to structured dependency details in JSON Format.
-
-#### Usage:  
-Run the script using:  
 ```sh
 streamlit run parser.py
 ```
