@@ -31,4 +31,4 @@ def update_dependencies(json_file, output_file):
     print(f"Updated dependencies saved to {output_file}")
 
 # Example Usage
-update_dependencies("dependencies.json", "updated_dependencies.json")
+update_dependencies("dist/dependencies.json", "dist/updated_dependencies.json")

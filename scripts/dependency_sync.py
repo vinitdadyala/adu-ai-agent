@@ -90,6 +90,6 @@ def update_dependencies(pom_file, output_file="input_prompt.json"):
 
 if __name__ == "__main__":
     pom_file_path = "pom.xml"
-    output_file_path = "input_prompt.json"  # Output file name
+    output_file_path = "dist/input_prompt.json"  # Output file name
 
     update_dependencies(pom_file_path, output_file_path)

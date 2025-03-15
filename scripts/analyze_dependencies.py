@@ -41,7 +41,7 @@ class DependencyAnalysis(dspy.Signature):
 # Create DSPy predictor using ChainOfThought
 analyze_dependency = dspy.ChainOfThought(DependencyAnalysis)
 
-def read_input_prompt(file_path="input_prompt.json"):
+def read_input_prompt(file_path="dist/input_prompt.json"):
     """Reads the input JSON containing dependency details."""
     try:
         with open(file_path, "r", encoding="utf-8") as file:
