@@ -1,90 +1,71 @@
-# Installation
+# Project Setup Guide
 
-## 1. Install Visual Studio Code
-Download and install **Visual Studio Code** from the official website:  
-[VS Code Download](https://code.visualstudio.com/download)
+## 1. Install VS Code  
+Download and install [VS Code](https://code.visualstudio.com/)
 
-### Windows and MacOS
-- Run the installer and follow the default setup.
-- Ensure the **"Add to PATH"** option is selected during installation.
+## 2. Install **uv** (Python package/dependency manager)  
+Install [uv](https://github.com/astral-sh/uv)  
 
-
-## 2. Install Python 3.12
-Download and install **Python 3.12** from the official website:  
-[Python 3.12 Download](https://www.python.org/downloads/)
-
-### Windows and MacOS
-- Run the installer and check **"Add Python to PATH"** before proceeding.
-
-## 3. Clone This Repository
-
-To set up this project locally, follow these steps:
-
-### **1️. Open a Terminal**
-- On **Windows**: Open **Git Bash**, **Command Prompt**, or **PowerShell**  
-- On **Mac/Linux**: Open the **Terminal**
-
-### **2️. Navigate to the Directory Where You Want to Clone the Repo**
-For example:
-```sh
-cd ~/Projects
+### For macOS/Linux (run in terminal):
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-### **3️. Clone the Repository**
-Run the following command:
-```sh
-git clone https://github.com/vinitdadyala/adu-ai-agent.git
-```
-## Create a Virtual Environment and Install Dependencies
-
-To set up a virtual environment and install all required libraries, follow these steps:
-
-### . Create a Virtual Environment  
-Open a terminal in the project directory and run:  
-
-**On Windows (Command Prompt or PowerShell):**  
-```sh
-python -m venv .venv
+### For Windows (run in PowerShell):
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
-**On Mac/Linux:**  
-```sh
-python3 -m venv .venv
+## 3. Install Python (using **uv**)  
+To install Python 3.12:  
+```bash
+uv python install 3.12
 ```
 
-This creates a `.venv` folder in the project directory.
+## 4. Create and Activate Virtual Environment  
 
-### 2️. Activate the Virtual Environment  
-
-**On Windows (Command Prompt):**  
-```sh
-.venv\Scripts\activate
+### Create Virtual Environment:  
+```bash
+uv venv --python 3.12
 ```
-**On Windows (PowerShell):**  
-```sh
-.venv\Scripts\Activate.ps1
-```
-(If you get a permissions error, run: `Set-ExecutionPolicy Unrestricted -Scope Process` and try again.)  
 
-**On Mac/Linux:**  
-```sh
+### Activate Virtual Environment:  
+
+#### macOS/Linux:
+```bash
 source .venv/bin/activate
 ```
 
-Once activated, your terminal should show `(venv)` or `(.venv)` at the beginning of the line.
-
-### 3️. Install Dependencies  
-Run the following command to install all required libraries from a text file:  
-```sh
-pip install -r requirements.txt
+#### Windows:
+```powershell
+.\.venv\Scripts\activate
 ```
 
-This will install all dependencies listed in `requirements.txt`.
-
-### 4️. Verify Installation  
-Check if the necessary packages are installed:  
-```sh
-pip list
+## 5. Install Required Packages  
+```bash
+uv pip install -r ./requirements.txt
 ```
 
-The virtual environment is now set up and ready for use.
+## 6. Setup Groq Account  
+
+1. Visit [Groq Cloud](https://groq.com/)
+2. Create an account or login.
+3. Navigate to **"API Keys"** → **"Create API Key"**.
+4. Copy your newly generated API key.
+
+## 7. Setup Environment Variables  
+
+### Create `.env` file in project root:  
+
+#### macOS/Linux:
+```bash
+touch .env
+echo "GROQ_API_KEY=your_api_key_here" > .env
+```
+
+#### Windows (Command Prompt):
+```cmd
+echo GROQ_API_KEY=your_api_key_here > .env
+```
+
+> ⚠️ **Replace `your_api_key_here` with your actual Groq API key.**
