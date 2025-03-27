@@ -7,7 +7,7 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 import concurrent.futures
-from tavily import TavilyClient  
+from tavily import TavilyClient
 
 # Load environment variables
 load_dotenv()
@@ -19,6 +19,7 @@ if not groq_api_key:
 if not tavily_api_key:
     raise ValueError("TAVILY_API_KEY not found in environment variables")
 
+
 # Initialize DSPy and Groq LLM
 def get_dspy_analyzer():
     if "analyze_dependency" not in st.session_state:
@@ -28,15 +29,22 @@ def get_dspy_analyzer():
 
     return st.session_state["analyze_dependency"]
 
+
 search_client = TavilyClient(api_key=tavily_api_key)
+
 
 # DSPy Signature for Dependency Analysis
 class DependencyAnalysis(dspy.Signature):
     web_insights = dspy.InputField()
-    security_changes = dspy.OutputField(desc="List of security risks mitigated or introduced")
-    deprecated_methods = dspy.OutputField(desc="List of deprecated methods or breaking changes")
+    security_changes = dspy.OutputField(
+        desc="List of security risks mitigated or introduced"
+    )
+    deprecated_methods = dspy.OutputField(
+        desc="List of deprecated methods or breaking changes"
+    )
     code_changes = dspy.OutputField(desc="List of probable code modifications needed")
     severity_level = dspy.OutputField(desc="Classify impact as High, Moderate, or Low")
+
 
 def find_pom_file(project_directory):
     for root, dirs, files in os.walk(project_directory):
@@ -44,12 +52,13 @@ def find_pom_file(project_directory):
             return os.path.join(root, "pom.xml")
     return None
 
+
 # Parse pom.xml file
 def parse_pom(pom_file):
     tree = ET.parse(pom_file)
     root = tree.getroot()
 
-    ns = {'mvn': root.tag.split('}')[0].strip('{')} if '}' in root.tag else {}
+    ns = {"mvn": root.tag.split("}")[0].strip("{")} if "}" in root.tag else {}
 
     dependencies = {}
     for dep in root.findall("mvn:dependencies/mvn:dependency", ns):
@@ -65,6 +74,7 @@ def parse_pom(pom_file):
 
     return dependencies
 
+
 # Fetch latest version from Maven Central
 def get_latest_version(group_id, artifact_id):
     url = f"https://repo1.maven.org/maven2/{group_id.replace('.', '/')}/{artifact_id}/maven-metadata.xml"
@@ -78,6 +88,7 @@ def get_latest_version(group_id, artifact_id):
     except requests.RequestException:
         return "UNKNOWN"
 
+
 # Fetch latest versions in parallel
 def fetch_latest_versions(dependencies):
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -90,6 +101,7 @@ def fetch_latest_versions(dependencies):
             dependencies[artifact]["latest_version"] = future.result()
 
     return dependencies
+
 
 # Fetch web insights using Tavily
 def fetch_web_insights(artifact, latest_version, current_version):
@@ -107,13 +119,16 @@ def fetch_web_insights(artifact, latest_version, current_version):
     except Exception:
         return "No insights available.", ["No sources found."]
 
+
 # Analyze dependencies using DSPy
 def analyze_dependencies(dependencies):
     insights = {}
     analyze_dependency = get_dspy_analyzer()
 
     for artifact, details in dependencies.items():
-        web_insights, sources = fetch_web_insights(artifact, details["latest_version"], details["current_version"])
+        web_insights, sources = fetch_web_insights(
+            artifact, details["latest_version"], details["current_version"]
+        )
 
         if not web_insights.strip():
             web_insights = f"No significant web insights found for {artifact}. Perform a standard dependency upgrade analysis."
@@ -125,15 +140,17 @@ def analyze_dependencies(dependencies):
             "deprecated_methods": response.deprecated_methods,
             "code_changes": response.code_changes,
             "severity_level": response.severity_level,
-            "sources": sources
+            "sources": sources,
         }
 
     return insights
+
 
 # Function to clear DSPy from session state after analysis
 def cleanup_dspy():
     if "analyze_dependency" in st.session_state:
         del st.session_state["analyze_dependency"]
+
 
 # Streamlit UI
 st.title("Dependency Analyzer")
@@ -142,7 +159,7 @@ project_directory = st.text_input("Enter the path to your project folder:")
 
 if project_directory:
     pom_file_path = find_pom_file(project_directory)
-    
+
     if pom_file_path:
         st.success(f"Found pom.xml at: {pom_file_path}")
         dependencies = parse_pom(pom_file_path)
@@ -184,15 +201,21 @@ if "insights" in st.session_state:
 if st.session_state["show_analysis"]:
     with st.expander("Analysis Report", expanded=True):
         report_lines = []
-        
-        for i, (artifact, analysis) in enumerate(st.session_state["insights"].items(), start=1):
-            st.markdown(f"### {i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})")
+
+        for i, (artifact, analysis) in enumerate(
+            st.session_state["insights"].items(), start=1
+        ):
+            st.markdown(
+                f"### {i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})"
+            )
             st.write(f"**Severity Level:** {analysis['severity_level']}")
             st.write(f"**Security Changes:** {analysis['security_changes']}")
             st.write(f"**Deprecated Methods:** {analysis['deprecated_methods']}")
             st.write(f"**Code Changes:** {analysis['code_changes']}")
 
-            report_lines.append(f"{i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})")
+            report_lines.append(
+                f"{i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})"
+            )
             report_lines.append(f"Severity Level: {analysis['severity_level']}")
             report_lines.append(f"Security Changes: {analysis['security_changes']}")
             report_lines.append(f"Deprecated Methods: {analysis['deprecated_methods']}")
@@ -206,4 +229,6 @@ if st.session_state["show_analysis"]:
                     report_lines.append(f"Source {j}: {url}")
 
         report_text = "\n".join(report_lines)
-        st.download_button("Download Analysis Report", report_text, "analysis_report.txt", "text/plain")
+        st.download_button(
+            "Download Analysis Report", report_text, "analysis_report.txt", "text/plain"
+        )

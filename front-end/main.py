@@ -7,7 +7,7 @@ import requests
 import streamlit as st
 from dotenv import load_dotenv
 import concurrent.futures
-from tavily import TavilyClient  
+from tavily import TavilyClient
 
 # Load environment variables
 load_dotenv()
@@ -19,6 +19,7 @@ if not groq_api_key:
 if not tavily_api_key:
     raise ValueError("TAVILY_API_KEY not found in environment variables")
 
+
 # Initialize DSPy and Groq LLM
 def get_dspy_analyzer():
     if "analyze_dependency" not in st.session_state:
@@ -28,15 +29,22 @@ def get_dspy_analyzer():
 
     return st.session_state["analyze_dependency"]
 
+
 search_client = TavilyClient(api_key=tavily_api_key)
+
 
 # DSPy Signature for Dependency Analysis
 class DependencyAnalysis(dspy.Signature):
     web_insights = dspy.InputField()
-    security_changes = dspy.OutputField(desc="List of security risks mitigated or introduced")
-    deprecated_methods = dspy.OutputField(desc="List of deprecated methods or breaking changes")
+    security_changes = dspy.OutputField(
+        desc="List of security risks mitigated or introduced"
+    )
+    deprecated_methods = dspy.OutputField(
+        desc="List of deprecated methods or breaking changes"
+    )
     code_changes = dspy.OutputField(desc="List of probable code modifications needed")
     severity_level = dspy.OutputField(desc="Classify impact as High, Moderate, or Low")
+
 
 def find_pom_file(project_directory):
     for root, dirs, files in os.walk(project_directory):
@@ -44,12 +52,13 @@ def find_pom_file(project_directory):
             return os.path.join(root, "pom.xml")
     return None
 
+
 # Parse pom.xml file
 def parse_pom(pom_file):
     tree = ET.parse(pom_file)
     root = tree.getroot()
 
-    ns = {'mvn': root.tag.split('}')[0].strip('{')} if '}' in root.tag else {}
+    ns = {"mvn": root.tag.split("}")[0].strip("{")} if "}" in root.tag else {}
 
     dependencies = {}
     for dep in root.findall("mvn:dependencies/mvn:dependency", ns):
@@ -65,6 +74,7 @@ def parse_pom(pom_file):
 
     return dependencies
 
+
 # Fetch latest version from Maven Central
 def get_latest_version(group_id, artifact_id):
     url = f"https://repo1.maven.org/maven2/{group_id.replace('.', '/')}/{artifact_id}/maven-metadata.xml"
@@ -78,6 +88,7 @@ def get_latest_version(group_id, artifact_id):
     except requests.RequestException:
         return "UNKNOWN"
 
+
 # Fetch latest versions in parallel
 def fetch_latest_versions(dependencies):
     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -90,6 +101,7 @@ def fetch_latest_versions(dependencies):
             dependencies[artifact]["latest_version"] = future.result()
 
     return dependencies
+
 
 # Fetch web insights using Tavily
 def fetch_web_insights(artifact, latest_version, current_version):
@@ -107,13 +119,16 @@ def fetch_web_insights(artifact, latest_version, current_version):
     except Exception:
         return "No insights available.", ["No sources found."]
 
+
 # Analyze dependencies using DSPy
 def analyze_dependencies(dependencies):
     insights = {}
     analyze_dependency = get_dspy_analyzer()
 
     for artifact, details in dependencies.items():
-        web_insights, sources = fetch_web_insights(artifact, details["latest_version"], details["current_version"])
+        web_insights, sources = fetch_web_insights(
+            artifact, details["latest_version"], details["current_version"]
+        )
 
         if not web_insights.strip():
             web_insights = f"No significant web insights found for {artifact}. Perform a standard dependency upgrade analysis."
@@ -125,27 +140,29 @@ def analyze_dependencies(dependencies):
             "deprecated_methods": response.deprecated_methods,
             "code_changes": response.code_changes,
             "severity_level": response.severity_level,
-            "sources": sources
+            "sources": sources,
         }
 
     return insights
+
 
 # Function to clear DSPy from session state after analysis
 def cleanup_dspy():
     if "analyze_dependency" in st.session_state:
         del st.session_state["analyze_dependency"]
 
+
 # Fetch pom.xml from GitHub repository
 def fetch_github_file(owner: str, repo: str, path: str, branch: str = "main") -> str:
     """
     Fetch a file from GitHub repository using Personal Access Token.
-    
+
     Args:
         owner (str): GitHub repository owner/organization
         repo (str): Repository name
         path (str): Path to file in the repository
         branch (str): Branch name (default: main)
-    
+
     Returns:
         str: Content of the file
     """
@@ -156,53 +173,57 @@ def fetch_github_file(owner: str, repo: str, path: str, branch: str = "main") ->
     GITHUB_PERSONAL_ACCESS_TOKEN = os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
     if not GITHUB_PERSONAL_ACCESS_TOKEN:
         raise ValueError("GITHUB_TOKEN not found in .env file")
-    
+
     # Set up headers with token
     headers = {
         "Authorization": f"Bearer {GITHUB_PERSONAL_ACCESS_TOKEN}",
-        "Accept": "application/vnd.github.v3.raw"
+        "Accept": "application/vnd.github.v3.raw",
     }
-    
+
     # Make request
     response = requests.get(url, headers=headers)
-    
+
     if response.status_code == 200:
         return response.text
     else:
-        raise Exception(f"Failed to fetch file. Status: {response.status_code}\nMessage: {response.text}")
+        raise Exception(
+            f"Failed to fetch file. Status: {response.status_code}\nMessage: {response.text}"
+        )
+
 
 def parse_github_url(github_url: str) -> tuple[str, str]:
     """
     Parse GitHub repository URL to extract owner and repo name.
-    
+
     Args:
         github_url (str): GitHub repository URL in any of these formats:
             - https://github.com/owner/repo
             - git@github.com:owner/repo.git
             - owner/repo
-    
+
     Returns:
         tuple[str, str]: Repository owner and name
     """
     # Remove .git extension if present
-    github_url = github_url.replace('.git', '')
-    
+    github_url = github_url.replace(".git", "")
+
     # Handle SSH URL format
-    if github_url.startswith('git@'):
-        github_url = github_url.split('git@github.com:')[1]
-    
+    if github_url.startswith("git@"):
+        github_url = github_url.split("git@github.com:")[1]
+
     # Handle HTTPS URL format
-    elif github_url.startswith(('http://', 'https://')):
-        github_url = github_url.split('github.com/')[1]
-    
+    elif github_url.startswith(("http://", "https://")):
+        github_url = github_url.split("github.com/")[1]
+
     # Split into owner and repo
     try:
-        owner, repo = github_url.split('/')
+        owner, repo = github_url.split("/")
         return owner.strip(), repo.strip()
     except ValueError:
         raise ValueError(
             "Invalid GitHub URL format. Expected format: owner/repo or full GitHub URL"
         )
+
 
 # Streamlit UI
 st.title("Dependency Analyzer")
@@ -215,20 +236,17 @@ if github_repo_url:
     try:
         # Replace with actual repository details
         pom_content = fetch_github_file(
-            owner=owner,
-            repo=repo,
-            path="pom.xml",
-            branch="master"
+            owner=owner, repo=repo, path="pom.xml", branch="master"
         )
 
         st.success("Successfully fetched pom.xml:")
-        st.code(pom_content, language="xml")    
+        st.code(pom_content, language="xml")
 
         # Optionally save to file
         pom_file_path = "dist/pom.xml"
         with open(pom_file_path, "w") as f:
             f.write(pom_content)
-        
+
         if pom_file_path:
             dependencies = parse_pom(pom_file_path)
 
@@ -247,7 +265,7 @@ if github_repo_url:
             st.session_state["dependencies"] = dependencies
         else:
             st.error("No pom.xml found in the provided directory.")
-        
+
     except Exception as e:
         st.error(f"Error: {str(e)}")
 
@@ -271,15 +289,21 @@ if "insights" in st.session_state:
 if st.session_state["show_analysis"]:
     with st.expander("Analysis Report", expanded=True):
         report_lines = []
-        
-        for i, (artifact, analysis) in enumerate(st.session_state["insights"].items(), start=1):
-            st.markdown(f"### {i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})")
+
+        for i, (artifact, analysis) in enumerate(
+            st.session_state["insights"].items(), start=1
+        ):
+            st.markdown(
+                f"### {i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})"
+            )
             st.write(f"**Severity Level:** {analysis['severity_level']}")
             st.write(f"**Security Changes:** {analysis['security_changes']}")
             st.write(f"**Deprecated Methods:** {analysis['deprecated_methods']}")
             st.write(f"**Code Changes:** {analysis['code_changes']}")
 
-            report_lines.append(f"{i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})")
+            report_lines.append(
+                f"{i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})"
+            )
             report_lines.append(f"Severity Level: {analysis['severity_level']}")
             report_lines.append(f"Security Changes: {analysis['security_changes']}")
             report_lines.append(f"Deprecated Methods: {analysis['deprecated_methods']}")
@@ -293,4 +317,6 @@ if st.session_state["show_analysis"]:
                     report_lines.append(f"Source {j}: {url}")
 
         report_text = "\n".join(report_lines)
-        st.download_button("Download Analysis Report", report_text, "analysis_report.txt", "text/plain")
+        st.download_button(
+            "Download Analysis Report", report_text, "analysis_report.txt", "text/plain"
+        )
