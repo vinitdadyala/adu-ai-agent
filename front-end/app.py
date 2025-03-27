@@ -38,6 +38,12 @@ class DependencyAnalysis(dspy.Signature):
     code_changes = dspy.OutputField(desc="List of probable code modifications needed")
     severity_level = dspy.OutputField(desc="Classify impact as High, Moderate, or Low")
 
+def find_pom_file(project_directory):
+    for root, dirs, files in os.walk(project_directory):
+        if "pom.xml" in files:
+            return os.path.join(root, "pom.xml")
+    return None
+
 # Parse pom.xml file
 def parse_pom(pom_file):
     tree = ET.parse(pom_file)
@@ -132,24 +138,42 @@ def cleanup_dspy():
 # Streamlit UI
 st.title("Dependency Analyzer")
 
-uploaded_file = st.file_uploader("Upload pom.xml", type=["xml"])
+project_directory = st.text_input("Enter the path to your project folder:")
 
-if uploaded_file:
-    dependencies = parse_pom(uploaded_file)
-    dependencies = fetch_latest_versions(dependencies)
+if project_directory:
+    pom_file_path = find_pom_file(project_directory)
+    
+    if pom_file_path:
+        st.success(f"Found pom.xml at: {pom_file_path}")
+        dependencies = parse_pom(pom_file_path)
 
-    # Convert dependencies to DataFrame and add index
-    df = pd.DataFrame(dependencies).T.reset_index()
-    df.index += 1  # Start index from 1
-    df.rename(columns={"index": "Artifact"}, inplace=True)
+        # Fetch latest versions before showing the table
+        dependencies = fetch_latest_versions(dependencies)
 
-    st.write(f"### Total Dependencies Found: {len(dependencies)}")  # Show count
-    st.table(df)
+        # Convert dependencies to DataFrame and add index
+        df = pd.DataFrame(dependencies).T.reset_index()
+        df.index += 1  # Start index from 1
+        df.rename(columns={"index": "Artifact"}, inplace=True)
 
-    if st.button("Analyze Dependencies"):
+        st.write(f"### Total Dependencies Found: {len(dependencies)}")  # Show count
+        st.table(df)  # Now it includes "latest_version"
+
+        # Store dependencies in session state
+        st.session_state["dependencies"] = dependencies
+
+    else:
+        st.error("No pom.xml found in the provided directory.")
+
+# Ensure dependencies exist before analysis
+if st.button("Analyze Dependencies"):
+    if "dependencies" in st.session_state:
+        dependencies = st.session_state["dependencies"]
         insights = analyze_dependencies(dependencies)
         st.session_state["insights"] = insights
         cleanup_dspy()
+    else:
+        st.error("Dependencies not loaded. Please check if pom.xml was found.")
+
 
 if "show_analysis" not in st.session_state:
     st.session_state["show_analysis"] = False
