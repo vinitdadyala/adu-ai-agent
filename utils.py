@@ -71,13 +71,6 @@ def fetch_github_file(owner: str, repo: str, path: str, access_token: str, branc
             f"Failed to fetch file. Status: {response.status_code}\nMessage: {response.text}"
         )
 
-# Find pom.xml file in the project directory
-def find_pom_file(project_directory):
-    for root, dirs, files in os.walk(project_directory):
-        if "pom.xml" in files:
-            return os.path.join(root, "pom.xml")
-    return None
-
 # Parse pom.xml file
 def parse_pom(pom_file):
     tree = ET.parse(pom_file)

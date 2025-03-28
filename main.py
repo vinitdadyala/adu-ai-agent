@@ -111,8 +111,7 @@ if github_repo_url:
             owner=owner, repo=repo, path="pom.xml", access_token=GITHUB_PERSONAL_ACCESS_TOKEN, branch="master"
         )
 
-        st.success("Successfully fetched pom.xml:")
-        st.code(pom_content, language="xml")
+        st.success("Successfully parsed pom.xml:")
 
         # Optionally save to file
         pom_file_path = "dist/pom.xml"
