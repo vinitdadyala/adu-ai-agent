@@ -26,7 +26,10 @@ def parse_github_url(github_url: str) -> tuple[str, str]:
 
     # Handle HTTPS URL format
     elif github_url.startswith(("http://", "https://")):
-        github_url = github_url.split("github.com/")[1]
+        parts = github_url.split("github.com/")
+        if len(parts) < 2:
+            raise ValueError("Invalid GitHub URL format. URL must contain 'github.com/'")
+        github_url = parts[1]
 
     # Split into owner and repo
     try:
