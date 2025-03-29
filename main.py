@@ -111,8 +111,6 @@ if github_repo_url:
             owner=owner, repo=repo, path="pom.xml", access_token=GITHUB_PERSONAL_ACCESS_TOKEN, branch="master"
         )
 
-        st.success("Successfully parsed pom.xml:")
-
         # Optionally save to file
         pom_file_path = "dist/pom.xml"
         with open(pom_file_path, "w") as f:
@@ -129,7 +127,7 @@ if github_repo_url:
             df.index += 1  # Start index from 1
             df.rename(columns={"index": "Artifact"}, inplace=True)
 
-            st.write(f"### Total Dependencies Found: {len(dependencies)}")  # Show count
+            st.write(f"### Total Dependencies in pom.xml: {len(dependencies)}")  # Show count
             st.table(df)  # Now it includes "latest_version"
 
             # Store dependencies in session state
