@@ -1,6 +1,5 @@
 import os
 import dspy
-import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 from tavily import TavilyClient
@@ -42,6 +41,7 @@ class DependencyAnalysis(dspy.Signature):
     )
     code_changes = dspy.OutputField(desc="List of probable code modifications needed")
     severity_level = dspy.OutputField(desc="Classify impact as High, Moderate, or Low")
+
 
 # Fetch web insights using Tavily
 def fetch_web_insights(artifact, latest_version, current_version):
@@ -111,7 +111,7 @@ if github_repo_url:
             owner=owner, repo=repo, path="pom.xml", access_token=GITHUB_PERSONAL_ACCESS_TOKEN, branch="master"
         )
 
-        # Optionally save to file
+        # Optionally save to file [WE CAN REMOVE THIS STEP LATER]
         pom_file_path = "dist/pom.xml"
         with open(pom_file_path, "w") as f:
             f.write(pom_content)
@@ -122,70 +122,24 @@ if github_repo_url:
             # Fetch latest versions before showing the table
             dependencies = utils.fetch_latest_versions(dependencies)
 
-            # Convert dependencies to DataFrame and add index
-            df = pd.DataFrame(dependencies).T.reset_index()
-            df.index += 1  # Start index from 1
-            df.rename(columns={"index": "Artifact"}, inplace=True)
-
+            # Show dependencies in table
+            df = utils.dependencies_to_dataframe(dependencies)
             st.write(f"### Total Dependencies in pom.xml: {len(dependencies)}")  # Show count
             st.table(df)  # Now it includes "latest_version"
 
-            # Store dependencies in session state
-            st.session_state["dependencies"] = dependencies
+            if dependencies:
+                with st.spinner("Generating Analysis Report...", show_time=True):
+                    insights = analyze_dependencies(dependencies)
+                    st.session_state["insights"] = insights
+
+                    st.success("Analysis report generated successfully!")
+                    utils.generate_analysis_report(dependencies, insights)
+
+                cleanup_dspy()
+            else:
+                st.error("Dependencies not loaded. Please check if pom.xml was found.")
         else:
             st.error("No pom.xml found in the provided directory.")
 
     except Exception as e:
         st.error(f"Error: {str(e)}")
-
-# Ensure dependencies exist before analysis
-if st.button("Analyze Dependencies"):
-    if "dependencies" in st.session_state:
-        dependencies = st.session_state["dependencies"]
-        insights = analyze_dependencies(dependencies)
-        st.session_state["insights"] = insights
-        cleanup_dspy()
-    else:
-        st.error("Dependencies not loaded. Please check if pom.xml was found.")
-
-
-if "show_analysis" not in st.session_state:
-    st.session_state["show_analysis"] = False
-
-if "insights" in st.session_state:
-    st.session_state["show_analysis"] = True
-
-if st.session_state["show_analysis"]:
-    with st.expander("Analysis Report", expanded=True):
-        report_lines = []
-
-        for i, (artifact, analysis) in enumerate(
-            st.session_state["insights"].items(), start=1
-        ):
-            st.markdown(
-                f"### {i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})"
-            )
-            st.write(f"**Severity Level:** {analysis['severity_level']}")
-            st.write(f"**Security Changes:** {analysis['security_changes']}")
-            st.write(f"**Deprecated Methods:** {analysis['deprecated_methods']}")
-            st.write(f"**Code Changes:** {analysis['code_changes']}")
-
-            report_lines.append(
-                f"{i}. {artifact} ({dependencies[artifact]['current_version']} → {dependencies[artifact]['latest_version']})"
-            )
-            report_lines.append(f"Severity Level: {analysis['severity_level']}")
-            report_lines.append(f"Security Changes: {analysis['security_changes']}")
-            report_lines.append(f"Deprecated Methods: {analysis['deprecated_methods']}")
-            report_lines.append(f"Code Changes: {analysis['code_changes']}")
-            report_lines.append("-" * 50)
-
-            if analysis["sources"]:
-                st.write("**Related Articles:**")
-                for j, url in enumerate(analysis["sources"], start=1):
-                    st.markdown(f"- [Source {j}]({url})")
-                    report_lines.append(f"Source {j}: {url}")
-
-        report_text = "\n".join(report_lines)
-        st.download_button(
-            "Download Analysis Report", report_text, "analysis_report.txt", "text/plain"
-        )
