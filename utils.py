@@ -166,3 +166,54 @@ def generate_analysis_report(dependencies, insights):
         st.download_button(
             "Download Analysis Report", report_text, "analysis_report.txt", "text/plain"
         )
+
+
+import os
+import subprocess
+import requests
+
+# Clone the repository
+def clone_repo(owner: str, repo: str):
+    """
+    Fetch a file from GitHub repository using Personal Access Token.
+
+    Args:
+        owner (str): GitHub repository owner/organization
+        repo (str): Repository name
+    """
+    repo_url = f"git@github.com:{owner}/{repo}.git"
+    subprocess.run(["git", "clone", repo_url], check=True)
+
+# Check if branch exists
+def branch_exists(branch_name: str):
+    subprocess.run(["git", "fetch"], check=True)
+    branches = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True).stdout
+    return f"origin/{branch_name}" in branches
+
+# Create a new branch if not exists
+def create_branch(branch_name: str):
+    if not branch_exists(branch_name):
+        subprocess.run(["git", "checkout", "-b", branch_name], check=True)
+        subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
+
+# Push changes to branch
+def commit_and_push_changes(branch_name: str):
+    subprocess.run(["git", "add", "."], check=True)
+    subprocess.run(["git", "commit", "-m", "Upgrade dependencies"], check=True)
+    subprocess.run(["git", "push", "origin", branch_name], check=True)
+
+# Create a pull request
+def create_pull_request(owner: str, repo: str, token: str, branch_name: str):
+    url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
+    headers = {"Authorization": f"token {token}"}
+    data = {
+        "title": "Dependency Upgrade PR",
+        "head": branch_name,
+        "base": "main",
+        "body": "This PR upgrades dependencies in pom.xml"
+    }
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 201:
+        print("Pull request created successfully!")
+    else:
+        print(f"Failed to create PR: {response.text}")
