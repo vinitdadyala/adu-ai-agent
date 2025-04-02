@@ -20,7 +20,7 @@ if not tavily_api_key:
 # Initialize DSPy and Groq LLM
 def get_dspy_analyzer():
     if "analyze_dependency" not in st.session_state:
-        llm = dspy.LM(model="groq/llama3-70b-8192", api_key=groq_api_key)
+        llm = dspy.LM(model="groq/llama-3.3-70b-versatile", api_key=groq_api_key)
         dspy.settings.configure(lm=llm)
         st.session_state["analyze_dependency"] = dspy.ChainOfThought(DependencyAnalysis)
 
@@ -99,6 +99,8 @@ github_repo_url = st.text_input("Enter the Github repo URL:")
 # github_repo_url = https://github.com/techneo1/AI-Engineering
 if github_repo_url:
     owner, repo = utils.parse_github_url(github_repo_url)
+    branch_name = 'feature/dependency-upgrade'
+    target_path = "/tmp/test"
 
     try:
         # Get GitHub token from environment
@@ -106,17 +108,13 @@ if github_repo_url:
         if not GITHUB_PERSONAL_ACCESS_TOKEN:
             raise ValueError("GITHUB_TOKEN not found in .env file")
     
-        # Replace with actual repository details
-        pom_content = utils.fetch_github_file(
-            owner=owner, repo=repo, path="pom.xml", access_token=GITHUB_PERSONAL_ACCESS_TOKEN, branch="master"
-        )
+        # Clone repo
+        cloned_path = utils.clone_github_repo(github_repo_url, target_path, GITHUB_PERSONAL_ACCESS_TOKEN)
+        st.info(f"Repo cloned at: {cloned_path}")    
 
-        # Optionally save to file [WE CAN REMOVE THIS STEP LATER]
-        pom_file_path = "dist/pom.xml"
-        with open(pom_file_path, "w") as f:
-            f.write(pom_content)
+        pom_file_path = f"{cloned_path}/pom.xml"
 
-        if pom_file_path:
+        if utils.file_exists(pom_file_path):
             dependencies = utils.parse_pom(pom_file_path)
 
             # Fetch latest versions before showing the table
@@ -139,7 +137,7 @@ if github_repo_url:
             else:
                 st.error("Dependencies not loaded. Please check if pom.xml was found.")
         else:
-            st.error("No pom.xml found in the provided directory.")
+            st.error("pom.xml does not exists in the cloned repo!")
 
     except Exception as e:
         st.error(f"Error: {str(e)}")

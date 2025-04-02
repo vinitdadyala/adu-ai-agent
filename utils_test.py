@@ -3,6 +3,8 @@ from unittest.mock import patch, Mock
 import os
 import requests
 import utils
+from git import Repo, GitCommandError
+import pytest
 
 class TestUtils(unittest.TestCase):
     def test_parse_github_url_valid_https(self):
@@ -33,33 +35,6 @@ class TestUtils(unittest.TestCase):
         for url in invalid_urls:
             with self.assertRaises(ValueError):
                 utils.parse_github_url(url)
-
-    @patch('requests.get')
-    def test_fetch_github_file_success(self, mock_get):
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.text = "test content"
-        mock_get.return_value = mock_response
-
-        content = utils.fetch_github_file("owner", "repo", "test.xml", "token123")
-        self.assertEqual(content, "test content")
-        mock_get.assert_called_with(
-            "https://raw.githubusercontent.com/owner/repo/main/test.xml",
-            headers={
-                "Authorization": "Bearer token123",
-                "Accept": "application/vnd.github.v3.raw"
-            }
-        )
-
-    @patch('requests.get')
-    def test_fetch_github_file_error(self, mock_get):
-        mock_response = Mock()
-        mock_response.status_code = 404
-        mock_response.text = "Not Found"
-        mock_get.return_value = mock_response
-
-        with self.assertRaises(Exception):
-            utils.fetch_github_file("owner", "repo", "test.xml", "token123")
 
     def test_parse_pom_with_dependencies(self):
         test_pom_content = """
@@ -131,12 +106,6 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(updated_deps["test-artifact"]["latest_version"], "1.1.0")
             self.assertEqual(updated_deps["test-artifact2"]["latest_version"], "2.1.0")
 
-    
-    @patch("subprocess.run")
-    def test_clone_repo(self, mock_run):
-        utils.clone_repo("user", "repo")
-        mock_run.assert_called_with(["git", "clone", "git@github.com:user/repo.git"], check=True)
-
     @patch("subprocess.run")
     def test_branch_exists(self, mock_run):
         mock_run.return_value = Mock(stdout="  origin/main\n  origin/dev")
@@ -173,6 +142,105 @@ class TestUtils(unittest.TestCase):
                 "body": "This PR upgrades dependencies in pom.xml"
             }
         )
+
+    
+    @patch('git.Repo.clone_from')
+    @patch('os.makedirs')
+    def test_clone_public_repo_success(self, mock_makedirs, mock_clone):
+        """Test successful cloning of a public repository"""
+        # Test data
+        github_url = "https://github.com/testowner/testrepo"
+        target_path = "/tmp/test"
+        
+        # Execute
+        result = utils.clone_github_repo(github_url, target_path)
+        
+        # Assert
+        assert result == "/tmp/test/testrepo"
+        mock_makedirs.assert_called_once_with(target_path, exist_ok=True)
+        mock_clone.assert_called_once_with(
+            "https://github.com/testowner/testrepo.git",
+            "/tmp/test/testrepo"
+        )
+
+    @patch('git.Repo.clone_from')
+    @patch('os.makedirs')
+    def test_clone_private_repo_with_token(self, mock_makedirs, mock_clone):
+        """Test cloning private repository with token"""
+        # Test data
+        github_url = "https://github.com/testowner/private-repo"
+        target_path = "/tmp/test"
+        access_token = "ghp_test123token"
+        
+        # Execute
+        result = utils.clone_github_repo(github_url, target_path, access_token)
+        
+        # Assert
+        assert result == "/tmp/test/private-repo"
+        mock_clone.assert_called_once_with(
+            f"https://{access_token}@github.com/testowner/private-repo.git",
+            "/tmp/test/private-repo"
+        )
+
+    def test_clone_invalid_url(self):
+        """Test cloning with invalid GitHub URL"""
+        with pytest.raises(ValueError) as exc_info:
+            utils.clone_github_repo("invalid_url", "/tmp/test")
+        assert "Invalid GitHub URL format" in str(exc_info.value)
+
+    @patch('git.Repo.clone_from')
+    def test_clone_git_error(self, mock_clone):
+        """Test handling of Git clone errors"""
+        # Setup mock to raise GitCommandError
+        mock_clone.side_effect = GitCommandError('git clone', 128)
+        
+        with pytest.raises(ValueError) as exc_info:
+            utils.clone_github_repo("https://github.com/testowner/testrepo", "/tmp/test")
+        assert "Failed to clone repository" in str(exc_info.value)
+
+    @patch('os.makedirs')
+    def test_clone_directory_creation_error(self, mock_makedirs):
+        """Test handling of directory creation errors"""
+        # Setup mock to raise OSError
+        mock_makedirs.side_effect = OSError("Permission denied")
+        
+        with pytest.raises(ValueError) as exc_info:
+            utils.clone_github_repo("https://github.com/testowner/testrepo", "/tmp/test")
+        assert "Failed to clone repository" in str(exc_info.value)
+
+    @patch('git.Repo.clone_from')
+    @patch('os.makedirs')
+    def test_clone_ssh_url(self, mock_makedirs, mock_clone):
+        """Test cloning with SSH URL format"""
+        # Test data
+        github_url = "git@github.com:testowner/testrepo.git"
+        target_path = "/tmp/test"
+        
+        # Execute
+        result = utils.clone_github_repo(github_url, target_path)
+        
+        # Assert
+        assert result == "/tmp/test/testrepo"
+        mock_clone.assert_called_once_with(
+            "https://github.com/testowner/testrepo.git",
+            "/tmp/test/testrepo"
+        )    
+
+    @patch('os.path.isfile')
+    def test_file_exists(self, mock_isfile):
+        """Test file existence checking"""
+        
+        # Test existing file
+        mock_isfile.return_value = True
+        self.assertTrue(utils.file_exists("pom.xml"))
+        
+        # Test non-existing file
+        mock_isfile.return_value = False
+        self.assertFalse(utils.file_exists("nonexistent.xml"))
+        
+        # Test error handling
+        mock_isfile.side_effect = Exception("Test error")
+        self.assertFalse(utils.file_exists("error.xml"))    
 
 if __name__ == '__main__':
     unittest.main()

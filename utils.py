@@ -3,6 +3,10 @@ import pandas as pd
 import streamlit as st
 import concurrent.futures
 import xml.etree.ElementTree as ET
+import subprocess
+import os
+from git import Repo
+
 
 # Parse GitHub URL
 def parse_github_url(github_url: str) -> tuple[str, str]:
@@ -39,40 +43,6 @@ def parse_github_url(github_url: str) -> tuple[str, str]:
     except ValueError:
         raise ValueError(
             "Invalid GitHub URL format. Expected format: owner/repo or full GitHub URL"
-        )
-
-# Fetch pom.xml from GitHub repository
-def fetch_github_file(owner: str, repo: str, path: str, access_token: str, branch: str = "main") -> str:
-    """
-    Fetch a file from GitHub repository using Personal Access Token.
-
-    Args:
-        owner (str): GitHub repository owner/organization
-        repo (str): Repository name
-        path (str): Path to file in the repository
-        branch (str): Branch name (default: main)
-        access_token (str): Personal Access Token with repo scope
-
-    Returns:
-        str: Content of the file
-    """
-    # Construct raw content URL
-    url = f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{path}"
-
-    # Set up headers with token
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Accept": "application/vnd.github.v3.raw",
-    }
-
-    # Make request
-    response = requests.get(url, headers=headers)
-
-    if response.status_code == 200:
-        return response.text
-    else:
-        raise Exception(
-            f"Failed to fetch file. Status: {response.status_code}\nMessage: {response.text}"
         )
 
 # Parse pom.xml file
@@ -168,21 +138,40 @@ def generate_analysis_report(dependencies, insights):
         )
 
 
-import os
-import subprocess
-import requests
-
 # Clone the repository
-def clone_repo(owner: str, repo: str):
+def clone_github_repo(github_url: str, target_path: str, access_token: str = None) -> str:
     """
-    Fetch a file from GitHub repository using Personal Access Token.
+    Clone a GitHub repository to the specified path.
 
     Args:
-        owner (str): GitHub repository owner/organization
-        repo (str): Repository name
+        github_url (str): GitHub repository URL
+        target_path (str): Local path where to clone the repository
+        access_token (str, optional): GitHub personal access token for private repos
+
+    Returns:
+        str: Path to the cloned repository
     """
-    repo_url = f"git@github.com:{owner}/{repo}.git"
-    subprocess.run(["git", "clone", repo_url], check=True)
+    try:
+        # Parse the GitHub URL to get owner and repo
+        owner, repo = parse_github_url(github_url)
+        
+        # Create clone URL with token if provided
+        if access_token:
+            clone_url = f"https://{access_token}@github.com/{owner}/{repo}.git"
+        else:
+            clone_url = f"https://github.com/{owner}/{repo}.git"
+        
+        # Create target directory if it doesn't exist
+        os.makedirs(target_path, exist_ok=True)
+        
+        # Clone the repository
+        repo_path = os.path.join(target_path, repo)
+        Repo.clone_from(clone_url, repo_path)
+        
+        return repo_path
+        
+    except Exception as e:
+        raise ValueError(f"Failed to clone repository: {str(e)}")
 
 # Check if branch exists
 def branch_exists(branch_name: str):
@@ -217,3 +206,19 @@ def create_pull_request(owner: str, repo: str, token: str, branch_name: str):
         print("Pull request created successfully!")
     else:
         print(f"Failed to create PR: {response.text}")
+
+def file_exists(file_path: str) -> bool:
+    """
+    Check if a file exists in the repository.
+
+    Args:
+        file_path (str): Path to the file to check
+
+    Returns:
+        bool: True if file exists, False otherwise
+    """
+    try:
+        return os.path.isfile(file_path)
+    except Exception as e:
+        print(f"Error checking file existence: {str(e)}")
+        return False

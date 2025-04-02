@@ -28,5 +28,5 @@ As of now, functions under `utils.py` are covered
 
 ### **Run the tests**:
 ```sh
-pytest 
+pytest --cov=utils --cov-report=term-missing utils_test.py 
 ```
