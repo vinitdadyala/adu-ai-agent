@@ -110,4 +110,42 @@ def file_exists(file_path: str) -> bool:
         return os.path.isfile(file_path)
     except Exception as e:
         print(f"Error checking file existence: {str(e)}")
-        return False
+        return 
+    
+
+# Dummy method as of now. Need to replace with actual script
+def update_pom_versions(pom_path: str, dependencies: dict) -> None:
+    """
+    Update dependency versions in pom.xml, handling different namespace prefixes.
+
+    Args:
+        pom_path (str): Path to the pom.xml file
+        dependencies (dict): Dictionary of dependencies with their latest versions
+
+    Returns:
+        None
+    """
+    tree = ET.parse(pom_path)
+    root = tree.getroot()
+    
+    # Handle different possible namespace prefixes
+    if "}" in root.tag:
+        namespace = root.tag.split("}")[0].strip("{")
+        ns = {
+            "mvn": namespace,
+            "ns0": namespace  # Add ns0 as alternative prefix
+        }
+    else:
+        ns = {}
+    
+    # Try both namespace prefixes
+    for prefix in ["mvn", "ns0"]:
+        for dep in root.findall(f".//{prefix}:dependency", ns):
+            artifact_id = dep.find(f"{prefix}:artifactId", ns)
+            if artifact_id is not None and artifact_id.text in dependencies:
+                version = dep.find(f"{prefix}:version", ns)
+                latest_version = dependencies[artifact_id.text]["latest_version"]
+                if version is not None:
+                    version.text = latest_version
+    
+    tree.write(pom_path, encoding='UTF-8', xml_declaration=True)

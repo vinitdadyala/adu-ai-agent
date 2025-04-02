@@ -119,14 +119,6 @@ if github_repo_url:
         cloned_path = utils_git.clone_github_repo(github_repo_url, target_path, GITHUB_PERSONAL_ACCESS_TOKEN)
         st.info(f"Repo cloned at: {cloned_path}")
 
-        # Create feature branch if doesn't exist
-        os.chdir(cloned_path)  # Change to repo directory
-        if not utils_git.branch_exists(branch_name):
-            utils_git.create_branch(branch_name)
-            st.info(f"Created new branch: {branch_name}")
-        else:
-            st.info(f"Using existing branch: {branch_name}")   
-
         pom_file_path = f"{cloned_path}/pom.xml"
 
         if utils.file_exists(pom_file_path):
@@ -147,6 +139,33 @@ if github_repo_url:
 
                     st.success("Analysis report generated successfully!")
                     utils.generate_analysis_report(dependencies, insights)
+
+                    # Check if there are updates available
+                    # updates_available = any(
+                    #     dep['current_version'] != dep['latest_version'] 
+                    #     for dep in dependencies.values()
+                    # )
+                    updates_available = True
+
+                    if updates_available:
+                        # Generate unique branch name with timestamp
+                        branch_name = utils_git.generate_branch_name('feature/dependency-upgrade')
+                        
+                        # Create and switch to new branch
+                        os.chdir(cloned_path)
+                        utils_git.create_branch(branch_name)
+                        st.info(f"Created new branch for updates: {branch_name}")
+                        
+                        # Update pom.xml with new versions
+                        utils.update_pom_versions(pom_file_path, dependencies)
+                        
+                        # Commit changes
+                        utils_git.commit_and_push_changes(branch_name)
+                        pr_url = utils_git.create_pull_request(owner, repo, GITHUB_PERSONAL_ACCESS_TOKEN, branch_name, 'master')
+                        st.success(f"Created pull request with dependency updates: {pr_url}")
+                    else:
+                        st.info("All dependencies are up to date!")
+ 
 
                 cleanup_dspy()
             else:

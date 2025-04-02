@@ -3,6 +3,7 @@ import subprocess
 from git import Repo
 import shutil
 import requests
+from datetime import datetime
 
 # Parse GitHub URL
 def parse_github_url(github_url: str) -> tuple[str, str]:
@@ -41,6 +42,7 @@ def parse_github_url(github_url: str) -> tuple[str, str]:
             "Invalid GitHub URL format. Expected format: owner/repo or full GitHub URL"
         )
 
+
 def is_repo_cloned(target_path: str, repo_name: str) -> bool:
     """
     Check if repository is already cloned at the target path.
@@ -59,6 +61,7 @@ def is_repo_cloned(target_path: str, repo_name: str) -> bool:
     except:
         return False
 
+
 def remove_repo_if_exists(target_path: str, repo: str) -> None:
     """
     Remove repository directory if it exists.
@@ -73,6 +76,7 @@ def remove_repo_if_exists(target_path: str, repo: str) -> None:
             shutil.rmtree(repo_path)
         except Exception as e:
             raise ValueError(f"Failed to remove existing repository: {str(e)}")
+
 
 # Clone the repository
 def clone_github_repo(github_url: str, target_path: str, access_token: str = None) -> str:
@@ -109,36 +113,104 @@ def clone_github_repo(github_url: str, target_path: str, access_token: str = Non
     except Exception as e:
         raise ValueError(f"Failed to clone repository: {str(e)}")
 
-# Check if branch exists
-def branch_exists(branch_name: str):
+
+def branch_exists(branch_name: str) -> bool:
+    """
+    Check if a remote branch exists.
+
+    Args:
+        branch_name (str): Name of the branch to check
+
+    Returns:
+        bool: True if branch exists, False otherwise
+
+    Raises:
+        subprocess.CalledProcessError: If git command fails
+    """
     subprocess.run(["git", "fetch"], check=True)
     branches = subprocess.run(["git", "branch", "-r"], capture_output=True, text=True).stdout
     return f"origin/{branch_name}" in branches
 
-# Create a new branch if not exists
-def create_branch(branch_name: str):
+
+def create_branch(branch_name: str) -> None:
+    """
+    Create a new git branch and push it to remote if it doesn't exist.
+
+    Args:
+        branch_name (str): Name of the branch to create
+
+    Raises:
+        subprocess.CalledProcessError: If git command fails
+    """
     if not branch_exists(branch_name):
         subprocess.run(["git", "checkout", "-b", branch_name], check=True)
         subprocess.run(["git", "push", "-u", "origin", branch_name], check=True)
 
-# Push changes to branch
-def commit_and_push_changes(branch_name: str):
+
+def generate_branch_name(base_name: str) -> str:
+    """
+    Generate a unique branch name with timestamp.
+
+    Args:
+        base_name (str): Base name for the branch (e.g., 'feature/update')
+
+    Returns:
+        str: Branch name with timestamp (e.g., 'feature/update_20240402_103000')
+    """
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return f"{base_name}_{timestamp}"
+
+
+def commit_and_push_changes(branch_name: str) -> None:
+    """
+    Stage, commit, and push changes to the specified branch.
+
+    Args:
+        branch_name (str): Name of the branch to push changes to
+
+    Raises:
+        subprocess.CalledProcessError: If any git command fails
+    """
     subprocess.run(["git", "add", "."], check=True)
     subprocess.run(["git", "commit", "-m", "Upgrade dependencies"], check=True)
     subprocess.run(["git", "push", "origin", branch_name], check=True)
 
+
 # Create a pull request
-def create_pull_request(owner: str, repo: str, token: str, branch_name: str):
+def create_pull_request(owner: str, repo: str, token: str, branch_name: str, base_branch="main") -> str:
+    """
+    Create a pull request and return its URL.
+
+    Args:
+        owner (str): Repository owner
+        repo (str): Repository name
+        token (str): GitHub access token
+        branch_name (str): Branch name to create PR from
+
+    Returns:
+        str: URL of the created pull request or empty string if creation fails
+    """
     url = f"https://api.github.com/repos/{owner}/{repo}/pulls"
-    headers = {"Authorization": f"token {token}"}
+    headers = {
+        "Authorization": f"token {token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
     data = {
         "title": "Dependency Upgrade PR",
         "head": branch_name,
-        "base": "main",
+        "base": base_branch,
         "body": "This PR upgrades dependencies in pom.xml"
     }
+    
+    # try:
     response = requests.post(url, headers=headers, json=data)
-    if response.status_code == 201:
-        print("Pull request created successfully!")
-    else:
-        print(f"Failed to create PR: {response.text}")
+    response.raise_for_status()
+    
+    pr_data = response.json()
+    pr_url = pr_data.get("html_url")
+    
+    if pr_url:
+        return pr_url
+       
+    # except requests.exceptions.RequestException as e:
+    #     return f"Failed to create PR: {str(e)}"

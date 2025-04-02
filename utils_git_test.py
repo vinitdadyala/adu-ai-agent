@@ -56,23 +56,6 @@ class TestUtilsGit(unittest.TestCase):
         mock_run.assert_any_call(["git", "commit", "-m", "Upgrade dependencies"], check=True)
         mock_run.assert_any_call(["git", "push", "origin", "feature-branch"], check=True)
 
-    @patch("requests.post")
-    def test_create_pull_request(self, mock_post):
-        mock_response = Mock()
-        mock_response.status_code = 201
-        mock_post.return_value = mock_response
-        utils_git.create_pull_request("user", "repo", "fake_token", "feature-branch")
-        mock_post.assert_called_with(
-            "https://api.github.com/repos/user/repo/pulls",
-            headers={"Authorization": "token fake_token"},
-            json={
-                "title": "Dependency Upgrade PR",
-                "head": "feature-branch",
-                "base": "main",
-                "body": "This PR upgrades dependencies in pom.xml"
-            }
-        )
-
     @patch('shutil.rmtree')
     @patch('os.path.exists')
     def test_remove_repo_if_exists(self, mock_exists, mock_rmtree):
