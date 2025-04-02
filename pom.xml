@@ -1,47 +1,45 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<ns0:project xmlns:ns0="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <ns0:modelVersion>4.0.0</ns0:modelVersion>
 
-    <groupId>com.example</groupId>
-    <artifactId>dependency-analyzer</artifactId>
-    <version>1.0.0</version>
+    <ns0:groupId>com.example</ns0:groupId>
+    <ns0:artifactId>dependency-analyzer</ns0:artifactId>
+    <ns0:version>1.0.0</ns0:version>
 
-    <dependencies>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>32.0.0-jre</version>
-        </dependency>
+    <ns0:dependencies>
+        <ns0:dependency>
+            <ns0:groupId>com.google.guava</ns0:groupId>
+            <ns0:artifactId>guava</ns0:artifactId>
+            <ns0:version>33.4.6-jre</ns0:version>
+        </ns0:dependency>
 
-        <dependency>
-            <groupId>com.squareup.okhttp3</groupId>
-            <artifactId>okhttp</artifactId>
-            <version>4.11.0</version>
-        </dependency>
+        <ns0:dependency>
+            <ns0:groupId>com.squareup.okhttp3</ns0:groupId>
+            <ns0:artifactId>okhttp</ns0:artifactId>
+            <ns0:version>5.0.0-alpha.14</ns0:version>
+        </ns0:dependency>
 
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.13.0</version>
-        </dependency>
+        <ns0:dependency>
+            <ns0:groupId>org.apache.commons</ns0:groupId>
+            <ns0:artifactId>commons-lang3</ns0:artifactId>
+            <ns0:version>3.17.0</ns0:version>
+        </ns0:dependency>
 
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-core</artifactId>
-            <version>6.3.1.Final</version>
-        </dependency>
+        <ns0:dependency>
+            <ns0:groupId>org.hibernate</ns0:groupId>
+            <ns0:artifactId>hibernate-core</ns0:artifactId>
+            <ns0:version>7.0.0.Beta5</ns0:version>
+        </ns0:dependency>
 
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
-            <version>9.22.3</version>
-        </dependency>
+        <ns0:dependency>
+            <ns0:groupId>org.flywaydb</ns0:groupId>
+            <ns0:artifactId>flyway-core</ns0:artifactId>
+            <ns0:version>11.5.0</ns0:version>
+        </ns0:dependency>
 
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
-            <version>1.76</version>
-        </dependency>
-    </dependencies>
-</project>
+        <ns0:dependency>
+            <ns0:groupId>org.bouncycastle</ns0:groupId>
+            <ns0:artifactId>bcprov-jdk15on</ns0:artifactId>
+            <ns0:version>1.70</ns0:version>
+        </ns0:dependency>
+    </ns0:dependencies>
+</ns0:project>
