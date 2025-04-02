@@ -4,7 +4,8 @@ import streamlit as st
 from dotenv import load_dotenv
 from tavily import TavilyClient
 
-import utils;
+import utils
+import utils_git
 
 # Load environment variables
 load_dotenv()
@@ -98,7 +99,6 @@ st.title("Dependency Analyzer")
 github_repo_url = st.text_input("Enter the Github repo URL:")
 # github_repo_url = https://github.com/techneo1/AI-Engineering
 if github_repo_url:
-    owner, repo = utils.parse_github_url(github_repo_url)
     branch_name = 'feature/dependency-upgrade'
     target_path = "/tmp/test"
 
@@ -108,9 +108,24 @@ if github_repo_url:
         if not GITHUB_PERSONAL_ACCESS_TOKEN:
             raise ValueError("GITHUB_TOKEN not found in .env file")
     
-        # Clone repo
-        cloned_path = utils.clone_github_repo(github_repo_url, target_path, GITHUB_PERSONAL_ACCESS_TOKEN)
-        st.info(f"Repo cloned at: {cloned_path}")    
+        # Parse repo name from URL
+        owner, repo = utils_git.parse_github_url(github_repo_url)
+        
+        # Check if repo is already cloned
+        if utils_git.is_repo_cloned(target_path, repo):
+            # Remove existing repo and clone fresh
+            utils_git.remove_repo_if_exists(target_path, repo)
+
+        cloned_path = utils_git.clone_github_repo(github_repo_url, target_path, GITHUB_PERSONAL_ACCESS_TOKEN)
+        st.info(f"Repo cloned at: {cloned_path}")
+
+        # Create feature branch if doesn't exist
+        os.chdir(cloned_path)  # Change to repo directory
+        if not utils_git.branch_exists(branch_name):
+            utils_git.create_branch(branch_name)
+            st.info(f"Created new branch: {branch_name}")
+        else:
+            st.info(f"Using existing branch: {branch_name}")   
 
         pom_file_path = f"{cloned_path}/pom.xml"
 
