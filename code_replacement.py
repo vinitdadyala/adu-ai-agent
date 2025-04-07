@@ -111,6 +111,13 @@ def search_new_method(method, artifact):
         st.warning(f"Search error: {e}")
     return ""
 
+def clean_code_output(llm_response: str) -> str:
+    """Remove Markdown formatting and unnecessary comments from LLM response."""
+    cleaned = re.sub(r"```(java)?", "", llm_response)
+    cleaned = re.sub(r"(?i)//\s?TODO:.*", "", cleaned)
+    cleaned = re.sub(r"(?i)//.*deprecated.*", "", cleaned)
+    return cleaned.strip()
+
 def analyze_and_replace(java_file, insights, use_llm=True):
     updated_code = []
     modified = False
@@ -120,8 +127,7 @@ def analyze_and_replace(java_file, insights, use_llm=True):
     with open(java_file, "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    # Show first few lines for debugging
-    st.code("".join(lines[:10]), language="java")
+    st.code("".join(lines[:10]), language="java")  # Preview for debugging
 
     llm = get_replacement_llm() if use_llm else None
 
@@ -136,33 +142,29 @@ def analyze_and_replace(java_file, insights, use_llm=True):
             if not deprecated_raw:
                 continue
 
-            # 🛠 Extract proper method names like ClassName.methodName from the string
+            # Extract methods like Class.method()
             deprecated_methods = []
             for m in deprecated_raw:
                 deprecated_methods += re.findall(r"([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\(\)", m)
 
             for method in deprecated_methods:
                 if re.search(r"\b" + re.escape(method) + r"\b", line):
-                    st.warning(f"⚠️ Found deprecated usage of `{method}` in line:\n`{original_line.strip()}`")
-
-                    comment = f"// TODO: Deprecated method '{method}' found in {artifact}."
-                    replacement = ""
+                    st.warning(f"⚠️ Deprecated method `{method}` used in:\n`{original_line.strip()}`")
 
                     context = search_new_method(method, artifact)
 
                     if use_llm and context:
                         result = llm(deprecated_line=original_line.strip(), context=context)
-                        replacement = result.replacement_code.strip()
-
-                    updated_code.append(comment + "\n")
-                    if replacement:
+                        replacement = clean_code_output(result.replacement_code)
                         updated_code.append(replacement + "\n")
+                        modified = True
+                        replaced = True
                     else:
                         updated_code.append(original_line)
+                        modified = True
+                        replaced = True
 
-                    modified = True
-                    replaced = True
-                    break
+                    break  # Only one replacement per line
 
             if replaced:
                 break
@@ -198,7 +200,7 @@ def analyze_project_code(directory, insights, use_llm=True):
     return modified_files
 
 # --- STREAMLIT UI ---
-st.title("🧠 Java Auto Upgrader with LLM + Tavily")
+st.title("Automatic Dependency Upgrade")
 
 project_dir = st.text_input("📁 Enter your Java project directory:")
 insights_path = st.text_input("📄 Path to insights file (e.g., insights.txt):")
