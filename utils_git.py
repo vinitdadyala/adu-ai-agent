@@ -1,10 +1,11 @@
+import datetime
 import os
 import subprocess
+import time
 from git import Repo
 import shutil
 import requests
-from datetime import datetime
-
+import stat
 # Parse GitHub URL
 def parse_github_url(github_url: str) -> tuple[str, str]:
     """
@@ -64,7 +65,7 @@ def is_repo_cloned(target_path: str, repo_name: str) -> bool:
 
 def handle_remove_readonly(func, path, exc):
     # Called when rmtree hits a permission error
-    os.chmod(path, stat.S_IWRITE)
+    os.chmod(path, os.stat.S_IWRITE)
     func(path)
 
 def remove_repo_if_exists(target_path: str, repo: str) -> None:
@@ -164,7 +165,7 @@ def generate_branch_name(base_name: str) -> str:
     Returns:
         str: Branch name with timestamp (e.g., 'feature/update_20240402_103000')
     """
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     return f"{base_name}_{timestamp}"
 
 
@@ -221,19 +222,3 @@ def create_pull_request(owner: str, repo: str, token: str, branch_name: str, bas
        
     # except requests.exceptions.RequestException as e:
     #     return f"Failed to create PR: {str(e)}"
-
-def remove_repo_if_exists(target_path: str, repo_name: str) -> None:
-    """
-    Remove the existing repository directory if it exists.
-
-    Args:
-        target_path (str): Base directory where repos are cloned.
-        repo_name (str): Name of the repository to delete.
-    """
-    repo_path = os.path.join(target_path, repo_name)
-    if os.path.exists(repo_path):
-        try:
-            shutil.rmtree(repo_path)
-            print(f"✅ Removed existing repo at: {repo_path}")
-        except Exception as e:
-            raise RuntimeError(f"❌ Failed to remove existing repo: {e}")

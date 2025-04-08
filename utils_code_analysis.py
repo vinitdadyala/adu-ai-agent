@@ -7,7 +7,7 @@ from tavily import TavilyClient
 
 import utils
 import utils_git
-import utils_code
+import utils_code_replacement
 
 # Load environment variables
 load_dotenv()
@@ -99,7 +99,7 @@ def analyze_and_replace(java_file, insights, use_llm=True):
 
     st.code("".join(lines[:10]), language="java")  # Preview for debugging
 
-    llm = utils_code.get_replacement_llm() if use_llm else None
+    llm = utils_code_replacement.get_replacement_llm() if use_llm else None
 
     for line in lines:
         original_line = line
@@ -121,11 +121,11 @@ def analyze_and_replace(java_file, insights, use_llm=True):
                 if re.search(r"\b" + re.escape(method) + r"\b", line):
                     st.warning(f"⚠️ Deprecated method `{method}` used in:\n`{original_line.strip()}`")
 
-                    context = utils_code.search_new_method(method, artifact)
+                    context = utils_code_replacement.search_new_method(method, artifact)
 
                     if use_llm and context:
                         result = llm(deprecated_line=original_line.strip(), context=context)
-                        replacement = utils_code.clean_code_output(result.replacement_code)
+                        replacement = utils_code_replacement.clean_code_output(result.replacement_code)
                         updated_code.append(replacement + "\n")
                         modified = True
                         replaced = True

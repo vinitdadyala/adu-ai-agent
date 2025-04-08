@@ -35,7 +35,7 @@ def get_latest_version(group_id, artifact_id):
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             root = ET.fromstring(response.content)
-            latest_version = root.find("./versioning/latest")
+            latest_version = root.find(".//latest")
             return latest_version.text if latest_version is not None else "UNKNOWN"
     except requests.RequestException:
         return "UNKNOWN"

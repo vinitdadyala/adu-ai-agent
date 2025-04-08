@@ -3,8 +3,8 @@ import os
 
 import shutil
 
-from main import analyze_and_replace, analyze_dependencies
-from utils import parse_pom
+from utils_code_analysis import analyze_and_replace, analyze_dependencies
+from utils import dependencies_to_dataframe, fetch_latest_versions, find_pom_file, parse_pom
 from utils_git import clone_github_repo, commit_and_push_changes, create_pull_request, generate_branch_name, parse_github_url
 
 st.set_page_config(page_title="AI Dependency Upgrader", layout="wide")
@@ -29,16 +29,31 @@ if st.button("🚀 Run Full Upgrade Flow"):
 
         with st.spinner("🔍 Analyzing dependencies..."):
             # Parse pom.xml & generate input_prompt.json
-            pom_path = os.path.join(repo_path, "pom.xml")
-            if not os.path.exists(pom_path):
-                st.error("No pom.xml found at root of repo.")
+            try:
+                pom_path = find_pom_file(repo_path)
+            except FileNotFoundError:
+                st.error("No pom.xml found in the repository.")
                 st.stop()
-            parse_pom(pom_path)
+            dependencies=parse_pom(pom_path)
 
             # Run DSPy Analysis
-            insights = analyze_dependencies("input_prompt.json")
+            dependencies = parse_pom(pom_path)
+            dependencies = fetch_latest_versions(dependencies)
+            st.subheader("📦 Parsed Dependencies")
+            st.dataframe(dependencies_to_dataframe(dependencies))
+            insights = analyze_dependencies(dependencies)
             st.success("Dependency insights ready ✅")
-            st.code(insights, language="markdown")
+            st.markdown("### 📊 Dependency Insights")
+            for artifact, insight in insights.items():
+                with st.expander(f"📦 {artifact} ({insight.get('severity_level', 'Unknown')})"):
+                    st.markdown(f"**🔐 Security Changes:**\n```\n{insight['security_changes']}\n```", unsafe_allow_html=True)
+                    st.markdown(f"**🧹 Deprecated Methods:**\n```\n{insight['deprecated_methods']}\n```", unsafe_allow_html=True)
+                    st.markdown(f"**🛠 Code Changes:**\n```\n{insight['code_changes']}\n```", unsafe_allow_html=True)
+                    st.markdown(f"**🚨 Severity Level:** `{insight['severity_level']}`")
+                    st.markdown("**🔗 Sources:**")
+                    for src in insight["sources"]:
+                        st.markdown(f"- [{src}]({src})")
+
 
         with st.spinner("🛠️ Updating Java source code..."):
             # Apply code changes based on insights
