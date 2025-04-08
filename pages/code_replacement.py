@@ -1,6 +1,6 @@
 import os
 import streamlit as st
-from utils.utils_code_replacement import analyze_and_replace, analyze_project_code
+from utils.utils_code_replacement import analyze_and_replace, analyze_project_code, normalize_insights
 from utils.utils_git import commit_and_push_changes, create_pull_request, parse_github_url
 
 # --- PAGE CONFIG ---
@@ -19,6 +19,10 @@ insights = st.session_state["insights"]
 branch_name = st.session_state["branch_name"]
 github_url = st.session_state["github_url"]
 access_token = st.session_state["access_token"]
+insights = normalize_insights(insights)
+
+if st.checkbox("🔍 Show Raw Insights"):
+    st.json(insights)
 
 if st.button("🔧 Run Code Replacement"):
     try:

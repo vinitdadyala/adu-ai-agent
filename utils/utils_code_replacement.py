@@ -13,17 +13,19 @@ search_client = TavilyClient(api_key=tavily_api_key)
 class ReplacementSuggestion(dspy.Signature):
     deprecated_line = dspy.InputField()
     context = dspy.InputField()
-    replacement_code = dspy.OutputField(desc="The updated Java code line(s) to replace deprecated usage.")
+    replacement_code = dspy.OutputField(desc="Java code to replace the deprecated line with, including full method call with example.")
 
 def get_replacement_llm():
     if "dspy_configured" not in st.session_state:
-        dspy.settings.configure(lm=dspy.LM(model="groq/llama-3.3-70b-versatile", api_key=groq_api_key))
+        llm = dspy.LM(model="groq/llama-3.3-70b-versatile", api_key=groq_api_key)
+        dspy.settings.configure(lm=llm)
         st.session_state["dspy_configured"] = True
 
     if "replacement_chain" not in st.session_state:
-        st.session_state.replacement_chain = dspy.ChainOfThought(ReplacementSuggestion)
+        st.session_state["replacement_chain"] = dspy.ChainOfThought(ReplacementSuggestion)
 
-    return st.session_state.replacement_chain
+    return st.session_state["replacement_chain"]
+
 
 # --- CORE UTILS ---
 def find_java_files(base_dir):
@@ -34,17 +36,6 @@ def find_java_files(base_dir):
                 java_files.append(os.path.join(root, file))
     return java_files
 
-def search_new_method(method, artifact):
-    query = f"Java replacement for deprecated {method} in {artifact} with updated method with usage"
-    try:
-        result = search_client.search(query=query, max_results=2, search_depth="basic")
-        if result and result['results']:
-            print(result)
-            return result['results'][0]['content']
-    except Exception as e:
-        st.warning(f"Search error: {e}")
-    return ""
-
 def clean_code_output(llm_response: str) -> str:
     """Remove Markdown formatting and unnecessary comments from LLM response."""
     cleaned = re.sub(r"```(java)?", "", llm_response)
@@ -52,86 +43,81 @@ def clean_code_output(llm_response: str) -> str:
     cleaned = re.sub(r"(?i)//.*deprecated.*", "", cleaned)
     return cleaned.strip()
 
-def analyze_and_replace(java_file, insights, use_llm=True):
-    updated_code = []
-    modified = False
-
-    st.write(f"🔍 Scanning file: `{java_file}`")
-
-    with open(java_file, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-
-    st.code("".join(lines[:10]), language="java")  # Preview for debugging
-
-    llm = get_replacement_llm() if use_llm else None
-
-    for line in lines:
-        original_line = line
-        line_lower = line.lower()
-        replaced = False
-
-        for artifact, details in insights.items():
-            artifact = artifact.lower()
-            deprecated_raw = details.get("deprecated", [])
-            if not deprecated_raw:
-                continue
-
-            # Extract methods like Class.method()
-            deprecated_methods = []
-            for m in deprecated_raw:
-                deprecated_methods += re.findall(r"([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\(\)", m)
-
-            for method in deprecated_methods:
-                if re.search(r"\b" + re.escape(method) + r"\b", line):
-                    st.warning(f"⚠️ Deprecated method `{method}` used in:\n`{original_line.strip()}`")
-
-                    context = search_new_method(method, artifact)
-
-                    if use_llm and context:
-                        result = llm(deprecated_line=original_line.strip(), context=context)
-                        replacement = clean_code_output(result.replacement_code)
-                        updated_code.append(replacement + "\n")
-                        modified = True
-                        replaced = True
-                    else:
-                        updated_code.append(original_line)
-                        modified = True
-                        replaced = True
-
-                    break  # Only one replacement per line
-
-            if replaced:
-                break
-
-        if not replaced:
-            updated_code.append(original_line)
-
-    if modified:
-        with open(java_file, "w", encoding="utf-8") as f:
-            f.writelines(updated_code)
-        return True
-
-    return False
-
-def analyze_project_code(directory, insights, use_llm=True):
-    modified_files = []
-
-    has_deprecated = any(details.get("deprecated") for details in insights.values())
-    if not has_deprecated:
-        st.warning("⚠️ Insights file has no deprecated methods listed.")
-        return modified_files
-
-    for root, _, files in os.walk(directory):
-        for file in files:
-            if file.endswith(".java"):
-                java_file = os.path.join(root, file)
-                changed = analyze_and_replace(java_file, insights, use_llm)
-                if changed:
-                    modified_files.append(java_file)
+def normalize_insights(insights: dict) -> dict:
+    """
+    Ensures that deprecated_methods, security_changes, and code_changes are all lists.
+    If a field contains a non-informative string like 'No deprecated methods', it's set to an empty list.
+    """
+    for dep, info in insights.items():
+        for key in ["deprecated_methods", "security_changes", "code_changes"]:
+            value = info.get(key)
+            if isinstance(value, str):
+                # Clean up known "no info" strings
+                if any(phrase in value.lower() for phrase in ["no deprecated", "not explicitly mentioned", "none"]):
+                    info[key] = []
                 else:
-                    st.info(f"No changes: {java_file}")
+                    info[key] = [value]
+    return insights
 
-    return modified_files
+def get_code_change_tasks(insights):
+    """Extracts code change tasks from the full insights object."""
+    tasks = {}
+    for dep, info in insights.items():
+        task_list = info.get("code_changes", [])
+        if isinstance(task_list, str):
+            task_list = [task_list]
+        tasks[dep] = [task.strip() for task in task_list if task.strip()]
+    return tasks
+
+def analyze_and_replace(file_path, code, dspy_chain, code_tasks):
+    modified_code = code
+    applied_tasks = []
+
+    for dep, tasks in code_tasks.items():
+        for task in tasks:
+            prompt = f"""
+You are an expert Java developer.
+
+Dependency: {dep}
+Task: {task}
+
+Apply this to the following code only if it makes sense contextually. Maintain formatting.
+
+---
+
+{modified_code}
+"""
+            try:
+                result = dspy_chain(input_code=modified_code, instructions=prompt)
+                if result.output != modified_code:
+                    applied_tasks.append(f"[{dep}] {task}")
+                    modified_code = result.output
+            except Exception as e:
+                st.warning(f"Error analyzing {file_path} with task '{task}': {e}")
+
+    return modified_code, applied_tasks
+
+def analyze_project_code(project_path, insights):
+    code_tasks = get_code_change_tasks(insights)
+    java_files = find_java_files(project_path)
+    dspy_chain = st.session_state["replacement_chain"]
+
+    summary = {}
+
+    for file_path in java_files:
+        with open(file_path, "r") as f:
+            original_code = f.read()
+
+        modified_code, applied_tasks = analyze_and_replace(file_path, original_code, dspy_chain, code_tasks)
+
+        if applied_tasks and modified_code != original_code:
+            with open(file_path, "w") as f:
+                f.write(modified_code)
+
+            summary[file_path] = applied_tasks
+
+    return summary
+
 
 
 
