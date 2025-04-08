@@ -16,16 +16,17 @@ class ReplacementSuggestion(dspy.Signature):
     replacement_code = dspy.OutputField(desc="Java code to replace the deprecated line with, including full method call with example.")
 
 def get_replacement_llm():
-    if "dspy_configured" not in st.session_state:
-        llm = dspy.LM(model="groq/llama-3.3-70b-versatile", api_key=groq_api_key)
-        dspy.settings.configure(lm=llm)
-        st.session_state["dspy_configured"] = True
-
     if "replacement_chain" not in st.session_state:
+        # Ensure the LLM is configured only once in session
+        if "analyze_dependency" not in st.session_state:
+            llm = dspy.LM(model="groq/llama-3.3-70b-versatile", api_key=groq_api_key)
+            dspy.settings.configure(lm=llm)
+            st.session_state["analyze_dependency"] = dspy.ChainOfThought(DependencyAnalysis)
+
+        # Now we can initialize the replacement chain using the same DSPy setup
         st.session_state["replacement_chain"] = dspy.ChainOfThought(ReplacementSuggestion)
 
     return st.session_state["replacement_chain"]
-
 
 # --- CORE UTILS ---
 def find_java_files(base_dir):

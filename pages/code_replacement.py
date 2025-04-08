@@ -1,6 +1,6 @@
 import os
 import streamlit as st
-from utils.utils_code_replacement import analyze_and_replace, analyze_project_code, normalize_insights
+from utils.utils_code_replacement import analyze_and_replace, analyze_project_code, get_replacement_llm, normalize_insights
 from utils.utils_git import commit_and_push_changes, create_pull_request, parse_github_url
 
 # --- PAGE CONFIG ---
@@ -26,6 +26,7 @@ if st.checkbox("🔍 Show Raw Insights"):
 
 if st.button("🔧 Run Code Replacement"):
     try:
+        dspy_chain=get_replacement_llm()
         with st.spinner("🧠 Rewriting Java code based on insights..."):
             result_summary = analyze_project_code(repo_path, insights)
             st.success(f"✅ Java source code updated. {len(result_summary)} files modified.")
