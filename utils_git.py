@@ -62,21 +62,26 @@ def is_repo_cloned(target_path: str, repo_name: str) -> bool:
         return False
 
 
+def handle_remove_readonly(func, path, exc):
+    # Called when rmtree hits a permission error
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
 def remove_repo_if_exists(target_path: str, repo: str) -> None:
-    """
-    Remove repository directory if it exists.
-    
-    Args:
-        target_path (str): Base path where repos are cloned
-        repo (str): Name of the repository
-    """
     repo_path = os.path.join(target_path, repo)
     if os.path.exists(repo_path):
         try:
-            shutil.rmtree(repo_path)
+            # Attempt to remove it directly
+            shutil.rmtree(repo_path, onerror=handle_remove_readonly)
         except Exception as e:
-            raise ValueError(f"Failed to remove existing repository: {str(e)}")
-
+            print(f"⚠️ Direct delete failed. Trying rename workaround: {e}")
+            # Fallback: Rename the folder so it's out of the way
+            backup_path = f"{repo_path}_old_{int(time.time())}"
+            try:
+                os.rename(repo_path, backup_path)
+                print(f"📁 Renamed locked repo folder to: {backup_path}")
+            except Exception as rename_error:
+                raise ValueError(f"❌ Failed to rename locked repo folder: {rename_error}")
 
 # Clone the repository
 def clone_github_repo(github_url: str, target_path: str, access_token: str = None) -> str:
@@ -94,6 +99,8 @@ def clone_github_repo(github_url: str, target_path: str, access_token: str = Non
     try:
         # Parse the GitHub URL to get owner and repo
         owner, repo = parse_github_url(github_url)
+
+        remove_repo_if_exists(target_path, repo)
         
         # Create clone URL with token if provided
         if access_token:
@@ -214,3 +221,19 @@ def create_pull_request(owner: str, repo: str, token: str, branch_name: str, bas
        
     # except requests.exceptions.RequestException as e:
     #     return f"Failed to create PR: {str(e)}"
+
+def remove_repo_if_exists(target_path: str, repo_name: str) -> None:
+    """
+    Remove the existing repository directory if it exists.
+
+    Args:
+        target_path (str): Base directory where repos are cloned.
+        repo_name (str): Name of the repository to delete.
+    """
+    repo_path = os.path.join(target_path, repo_name)
+    if os.path.exists(repo_path):
+        try:
+            shutil.rmtree(repo_path)
+            print(f"✅ Removed existing repo at: {repo_path}")
+        except Exception as e:
+            raise RuntimeError(f"❌ Failed to remove existing repo: {e}")

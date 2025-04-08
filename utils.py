@@ -7,8 +7,8 @@ import os
 
 
 # Parse pom.xml file
-def parse_pom(pom_file):
-    tree = ET.parse(pom_file)
+def parse_pom(pom_path: str) -> dict:
+    tree = ET.parse(pom_path)
     root = tree.getroot()
 
     ns = {"mvn": root.tag.split("}")[0].strip("{")} if "}" in root.tag else {}
@@ -149,3 +149,11 @@ def update_pom_versions(pom_path: str, dependencies: dict) -> None:
                     version.text = latest_version
     
     tree.write(pom_path, encoding='UTF-8', xml_declaration=True)
+
+def find_pom_file(repo_path: str) -> str:
+    for root, dirs, files in os.walk(repo_path):
+        if "pom.xml" in files:
+            pom_path=os.path.join(root, "pom.xml")  # Full path
+            print(pom_path)
+            return pom_path
+    raise FileNotFoundError("No pom.xml found in the repository.")

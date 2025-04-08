@@ -1,4 +1,5 @@
 import os
+import re
 import dspy
 import streamlit as st
 from dotenv import load_dotenv
@@ -6,6 +7,7 @@ from tavily import TavilyClient
 
 import utils
 import utils_git
+import utils_code
 
 # Load environment variables
 load_dotenv()
@@ -86,92 +88,69 @@ def analyze_dependencies(dependencies):
 
     return insights
 
+def analyze_and_replace(java_file, insights, use_llm=True):
+    updated_code = []
+    modified = False
+
+    st.write(f"🔍 Scanning file: `{java_file}`")
+
+    with open(java_file, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    st.code("".join(lines[:10]), language="java")  # Preview for debugging
+
+    llm = utils_code.get_replacement_llm() if use_llm else None
+
+    for line in lines:
+        original_line = line
+        line_lower = line.lower()
+        replaced = False
+
+        for artifact, details in insights.items():
+            artifact = artifact.lower()
+            deprecated_raw = details.get("deprecated", [])
+            if not deprecated_raw:
+                continue
+
+            # Extract methods like Class.method()
+            deprecated_methods = []
+            for m in deprecated_raw:
+                deprecated_methods += re.findall(r"([a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\(\)", m)
+
+            for method in deprecated_methods:
+                if re.search(r"\b" + re.escape(method) + r"\b", line):
+                    st.warning(f"⚠️ Deprecated method `{method}` used in:\n`{original_line.strip()}`")
+
+                    context = utils_code.search_new_method(method, artifact)
+
+                    if use_llm and context:
+                        result = llm(deprecated_line=original_line.strip(), context=context)
+                        replacement = utils_code.clean_code_output(result.replacement_code)
+                        updated_code.append(replacement + "\n")
+                        modified = True
+                        replaced = True
+                    else:
+                        updated_code.append(original_line)
+                        modified = True
+                        replaced = True
+
+                    break  # Only one replacement per line
+
+            if replaced:
+                break
+
+        if not replaced:
+            updated_code.append(original_line)
+
+    if modified:
+        with open(java_file, "w", encoding="utf-8") as f:
+            f.writelines(updated_code)
+        return True
+
+    return False
+
 
 # Function to clear DSPy from session state after analysis
 def cleanup_dspy():
     if "analyze_dependency" in st.session_state:
         del st.session_state["analyze_dependency"]
-
-
-# Streamlit UI
-st.title("Dependency Analyzer")
-
-github_repo_url = st.text_input("Enter the Github repo URL:")
-# github_repo_url = https://github.com/techneo1/AI-Engineering
-if github_repo_url:
-    branch_name = 'feature/dependency-upgrade'
-    target_path = "/tmp/test"
-
-    try:
-        # Get GitHub token from environment
-        GITHUB_PERSONAL_ACCESS_TOKEN = os.getenv("GITHUB_PERSONAL_ACCESS_TOKEN")
-        if not GITHUB_PERSONAL_ACCESS_TOKEN:
-            raise ValueError("GITHUB_TOKEN not found in .env file")
-    
-        # Parse repo name from URL
-        owner, repo = utils_git.parse_github_url(github_repo_url)
-        
-        # Check if repo is already cloned
-        if utils_git.is_repo_cloned(target_path, repo):
-            # Remove existing repo and clone fresh
-            utils_git.remove_repo_if_exists(target_path, repo)
-
-        cloned_path = utils_git.clone_github_repo(github_repo_url, target_path, GITHUB_PERSONAL_ACCESS_TOKEN)
-        st.info(f"Repo cloned at: {cloned_path}")
-
-        pom_file_path = f"{cloned_path}/pom.xml"
-
-        if utils.file_exists(pom_file_path):
-            dependencies = utils.parse_pom(pom_file_path)
-
-            # Fetch latest versions before showing the table
-            dependencies = utils.fetch_latest_versions(dependencies)
-
-            # Show dependencies in table
-            df = utils.dependencies_to_dataframe(dependencies)
-            st.write(f"### Total Dependencies in pom.xml: {len(dependencies)}")  # Show count
-            st.table(df)  # Now it includes "latest_version"
-
-            if dependencies:
-                with st.spinner("Generating Analysis Report...", show_time=True):
-                    insights = analyze_dependencies(dependencies)
-                    st.session_state["insights"] = insights
-
-                    st.success("Analysis report generated successfully!")
-                    utils.generate_analysis_report(dependencies, insights)
-
-                    # Check if there are updates available
-                    # updates_available = any(
-                    #     dep['current_version'] != dep['latest_version'] 
-                    #     for dep in dependencies.values()
-                    # )
-                    updates_available = True
-
-                    if updates_available:
-                        # Generate unique branch name with timestamp
-                        branch_name = utils_git.generate_branch_name('feature/dependency-upgrade')
-                        
-                        # Create and switch to new branch
-                        os.chdir(cloned_path)
-                        utils_git.create_branch(branch_name)
-                        st.info(f"Created new branch for updates: {branch_name}")
-                        
-                        # Update pom.xml with new versions
-                        utils.update_pom_versions(pom_file_path, dependencies)
-                        
-                        # Commit changes
-                        utils_git.commit_and_push_changes(branch_name)
-                        pr_url = utils_git.create_pull_request(owner, repo, GITHUB_PERSONAL_ACCESS_TOKEN, branch_name, 'master')
-                        st.success(f"Created pull request with dependency updates: {pr_url}")
-                    else:
-                        st.info("All dependencies are up to date!")
- 
-
-                cleanup_dspy()
-            else:
-                st.error("Dependencies not loaded. Please check if pom.xml was found.")
-        else:
-            st.error("pom.xml does not exists in the cloned repo!")
-
-    except Exception as e:
-        st.error(f"Error: {str(e)}")
