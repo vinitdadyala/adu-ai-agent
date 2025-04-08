@@ -1,6 +1,6 @@
 import os
 import streamlit as st
-from utils.utils_code_replacement import analyze_and_replace
+from utils.utils_code_replacement import analyze_and_replace, analyze_project_code
 from utils.utils_git import commit_and_push_changes, create_pull_request, parse_github_url
 
 # --- PAGE CONFIG ---
@@ -23,8 +23,12 @@ access_token = st.session_state["access_token"]
 if st.button("🔧 Run Code Replacement"):
     try:
         with st.spinner("🧠 Rewriting Java code based on insights..."):
-            result_summary = analyze_and_replace(repo_path, insights)
-            st.success("✅ Java source code updated.")
+            result_summary = analyze_project_code(repo_path, insights)
+            st.success(f"✅ Java source code updated. {len(result_summary)} files modified.")
+            if result_summary:
+                st.subheader("🪄 Files Modified")
+                for file in result_summary:
+                    st.markdown(f"- `{file}`")
 
         st.subheader("🪄 Replacement Summary")
         st.code(result_summary)

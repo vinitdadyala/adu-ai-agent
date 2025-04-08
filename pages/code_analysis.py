@@ -1,6 +1,8 @@
 import os
+from pathlib import Path
 import shutil
 import subprocess
+import tempfile
 import streamlit as st
 from utils.utils import parse_pom, fetch_latest_versions, dependencies_to_dataframe
 from utils.utils_git import clone_github_repo, generate_branch_name
@@ -19,11 +21,12 @@ access_token = st.text_input("🔐 GitHub Access Token (optional if public)", ty
 if st.button("🚀 Run Dependency Analysis"):
     try:
         with st.spinner("⏳ Cloning repository..."):
+            temp_dir = Path(tempfile.mkdtemp())  # e.g., C:\Users\<you>\AppData\Local\Temp\...
+            repo_path = temp_dir / "repo"
+            repo_path = Path(clone_github_repo(github_url, str(repo_path), access_token))
+            st.write(f"✅ Repo cloned at: `{repo_path}`")
+            st.write("📁 Files at root:", os.listdir(repo_path))
             original_cwd = os.getcwd()
-            target_path = "/tmp/test"
-            repo_path = clone_github_repo(github_url, target_path, access_token)
-            st.success(f"✅ Repo cloned at: `{repo_path}`")
-            st.write("📁 Root contents:", os.listdir(repo_path))
             os.chdir(repo_path)
 
         with st.spinner("🌿 Creating upgrade branch..."):
