@@ -5,9 +5,9 @@ import streamlit as st
 from dotenv import load_dotenv
 from tavily import TavilyClient
 
-import utils
-import utils_git
-import utils_code_replacement
+import utils.utils
+import utils.utils_git
+import utils.utils_code_replacement
 
 # Load environment variables
 load_dotenv()
