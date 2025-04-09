@@ -89,14 +89,19 @@ Apply this to the following code only if it makes sense contextually. Maintain f
 {modified_code}
 """
             try:
-                result = dspy_chain(input_code=modified_code, instructions=prompt)
-                if result.output != modified_code:
-                    applied_tasks.append(f"[{dep}] {task}")
-                    modified_code = result.output
+                result = dspy_chain(deprecated_line=modified_code, context=prompt)
+                if result and hasattr(result, 'replacement_code') and result.replacement_code:
+                    if result.replacement_code != modified_code:
+                        applied_tasks.append(f"[{dep}] {task}")
+                        modified_code = result.replacement_code
+                else:
+                    applied_tasks.append(f"[{dep}] {task} - No code change applied.")
+                    st.warning(f"Unexpected response structure or no change required: {result}")
             except Exception as e:
                 st.warning(f"Error analyzing {file_path} with task '{task}': {e}")
 
-    return modified_code, applied_tasks
+    return modified_code, applied_tasks  # <-- Add this!
+
 
 def analyze_project_code(project_path, insights):
     code_tasks = get_code_change_tasks(insights)
