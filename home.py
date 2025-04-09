@@ -1,5 +1,7 @@
 import streamlit as st
 
+st.session_state.clear()
+
 st.set_page_config(page_title="Java Auto-Upgrader", layout="wide")
 st.title("🚀 Java Dependency & Code Auto-Upgrader")
 

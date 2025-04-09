@@ -169,7 +169,7 @@ def generate_branch_name(base_name: str) -> str:
     return f"{base_name}_{timestamp}"
 
 
-def commit_and_push_changes(branch_name: str) -> None:
+def commit_and_push_changes(branch_name: str,repo_path: str) -> None:
     """
     Stage, commit, and push changes to the specified branch.
 
@@ -179,6 +179,9 @@ def commit_and_push_changes(branch_name: str) -> None:
     Raises:
         subprocess.CalledProcessError: If any git command fails
     """
+    cwd=os.getcwd()
+    os.chdir(repo_path)
+
     subprocess.run(["git", "add", "."], check=True)
     subprocess.run(["git", "commit", "-m", "Upgrade dependencies"], check=True)
     subprocess.run(["git", "push", "origin", branch_name], check=True)

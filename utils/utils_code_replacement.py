@@ -5,10 +5,7 @@ from tavily import TavilyClient
 import dspy
 
 # --- SETUP ---
-groq_api_key = os.getenv("GROQ_API_KEY")
-tavily_api_key = os.getenv("TAVILY_API_KEY")
-search_client = TavilyClient(api_key=tavily_api_key)
-
+groq_api_key = os.getenv("GROQ_API_KEY_NEW")
 # DSPy LLM Setup
 class ReplacementSuggestion(dspy.Signature):
     deprecated_line = dspy.InputField()
@@ -82,7 +79,16 @@ You are an expert Java developer.
 Dependency: {dep}
 Task: {task}
 
-Apply this to the following code only if it makes sense contextually. Maintain formatting.
+Please analyze the following Java code and apply the necessary changes related to the above dependency upgrade.
+
+Instructions:
+  1. Modify the code to reflect the upgrade. Replace deprecated methods or usages with their recommended alternatives.
+  2. Do not change class names, method names, or variable names unless absolutely required.
+  3. Do not add extra methods, tests, or boilerplate such as `main()` or logging unless explicitly instructed.
+  4. Preserve original formatting and indentation.
+  5. Avoid altering existing functionality unless required by the upgrade.
+  6. At the end of the file, add a comment block summarizing what was changed.
+  7. Return only the updated code — no markdown wrappers, no explanations.
 
 ---
 

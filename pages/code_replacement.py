@@ -39,7 +39,7 @@ if st.button("🔧 Run Code Replacement"):
         st.code(result_summary)
 
         with st.spinner("📤 Committing and pushing to GitHub..."):
-            commit_and_push_changes(branch_name)
+            commit_and_push_changes(branch_name,repo_path)
 
         with st.spinner("🔃 Creating Pull Request..."):
             owner, repo = parse_github_url(github_url)
