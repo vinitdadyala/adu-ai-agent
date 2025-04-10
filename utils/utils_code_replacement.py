@@ -19,6 +19,7 @@ def get_replacement_llm():
         # Ensure the LLM is configured only once in session
         if "analyze_dependency" not in st.session_state:
             llm = dspy.LM(model="groq/llama3-8b-8192", api_key=groq_api_key)
+
             dspy.settings.configure(lm=llm)
             st.session_state["analyze_dependency"] = dspy.ChainOfThought(DependencyAnalysis)
 
@@ -82,6 +83,7 @@ Dependency: {dep}
 Upgrade Context:
 {task}
 
+
 Please analyze the following Java code and apply the necessary changes related to the above dependency upgrade.
 
 Instructions:
@@ -97,7 +99,6 @@ Instructions:
 
 {modified_code}
 """
-
             try:
                 result = dspy_chain(deprecated_line=modified_code, context=prompt)
                 if result and hasattr(result, 'replacement_code') and result.replacement_code:
@@ -109,7 +110,6 @@ Instructions:
                     st.warning(f"Unexpected response structure or no change required: {result}")
             except Exception as e:
                 st.warning(f"Error analyzing {file_path} with task '{task}': {e}")
-
     return modified_code, applied_tasks  
 
 def analyze_project_code(project_path, insights):
@@ -170,4 +170,5 @@ def update_pom_with_latest_versions(pom_path, dependencies):
 
     except Exception as e:
         st.error(f"❌ Error updating pom.xml: {e}")
+
 

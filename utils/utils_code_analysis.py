@@ -87,7 +87,6 @@ def analyze_dependencies(dependencies):
         }
 
     return insights
-
 # Function to clear DSPy from session state after analysis
 def cleanup_dspy():
     if "analyze_dependency" in st.session_state:

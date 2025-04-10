@@ -23,6 +23,7 @@ access_token = st.session_state["access_token"]
 insights = normalize_insights(insights)
 pom_path=find_pom_file(repo_path)
 
+
 if st.checkbox("🔍 Show Raw Insights"):
     st.json(insights)
 
