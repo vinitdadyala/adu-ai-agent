@@ -1,8 +1,10 @@
 import os
+import stat
 import re
 import streamlit as st
 from tavily import TavilyClient
 import dspy
+import xml.etree.ElementTree as ET
 
 # --- SETUP ---
 groq_api_key = os.getenv("GROQ_API_KEY_NEW")
@@ -16,7 +18,8 @@ def get_replacement_llm():
     if "replacement_chain" not in st.session_state:
         # Ensure the LLM is configured only once in session
         if "analyze_dependency" not in st.session_state:
-            llm = dspy.LM(model="groq/llama-3.3-70b-versatile", api_key=groq_api_key)
+            llm = dspy.LM(model="groq/llama3-8b-8192", api_key=groq_api_key)
+
             dspy.settings.configure(lm=llm)
             st.session_state["analyze_dependency"] = dspy.ChainOfThought(DependencyAnalysis)
 
@@ -74,20 +77,22 @@ def analyze_and_replace(file_path, code, dspy_chain, code_tasks):
     for dep, tasks in code_tasks.items():
         for task in tasks:
             prompt = f"""
-You are an expert Java developer.
+You are an expert Java developer who is trying to upgrade the dependencies of his codebase.
 
 Dependency: {dep}
-Task: {task}
+Upgrade Context:
+{task}
+
 
 Please analyze the following Java code and apply the necessary changes related to the above dependency upgrade.
 
 Instructions:
-  1. Modify the code to reflect the upgrade. Replace deprecated methods or usages with their recommended alternatives.
+  1. Modify the code to reflect the upgrade. Replace deprecated methods, usages or with their recommended alternatives along with necessary imports.
   2. Do not change class names, method names, or variable names unless absolutely required.
   3. Do not add extra methods, tests, or boilerplate such as `main()` or logging unless explicitly instructed.
   4. Preserve original formatting and indentation.
   5. Avoid altering existing functionality unless required by the upgrade.
-  6. At the end of the file, add a comment block summarizing what was changed.
+  6. At the end of the file, ADD a comment block summarizing what was changed.
   7. Return only the updated code — no markdown wrappers, no explanations.
 
 ---
@@ -105,9 +110,7 @@ Instructions:
                     st.warning(f"Unexpected response structure or no change required: {result}")
             except Exception as e:
                 st.warning(f"Error analyzing {file_path} with task '{task}': {e}")
-
-    return modified_code, applied_tasks  # <-- Add this!
-
+    return modified_code, applied_tasks  
 
 def analyze_project_code(project_path, insights):
     code_tasks = get_code_change_tasks(insights)
@@ -130,6 +133,42 @@ def analyze_project_code(project_path, insights):
 
     return summary
 
+import xml.etree.ElementTree as ET
 
+import stat
+
+def update_pom_with_latest_versions(pom_path, dependencies):
+    ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
+    ET.register_namespace('', ns['m'])
+
+    try:
+        os.chmod(pom_path, stat.S_IWRITE)
+        tree = ET.parse(pom_path)
+        root = tree.getroot()
+        updated = False
+
+        for artifact_id, dep_info in dependencies.items():
+            group_id = dep_info.get("group_id")
+            latest_version = dep_info.get("latest_version")
+
+            for dependency in root.findall(".//m:dependency", ns):
+                g = dependency.find("m:groupId", ns)
+                a = dependency.find("m:artifactId", ns)
+                v = dependency.find("m:version", ns)
+
+                if g is not None and a is not None and v is not None:
+                    if g.text == group_id and a.text == artifact_id and v.text != latest_version:
+                        st.text(f"🔄 Updating {group_id}:{artifact_id} from {v.text} to {latest_version}")
+                        v.text = latest_version
+                        updated = True
+
+        if updated:
+            tree.write(pom_path, encoding="utf-8", xml_declaration=True)
+            st.success(f"✅ pom.xml updated and saved to {pom_path}")
+        else:
+            st.info("ℹ️ No updates needed in pom.xml")
+
+    except Exception as e:
+        st.error(f"❌ Error updating pom.xml: {e}")
 
 
