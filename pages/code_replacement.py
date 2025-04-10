@@ -17,6 +17,7 @@ if "repo_path" not in st.session_state or "insights" not in st.session_state:
 
 repo_path = st.session_state["repo_path"]
 insights = st.session_state["insights"]
+dependencies = st.session_state["dependencies"]
 branch_name = st.session_state["branch_name"]
 github_url = st.session_state["github_url"]
 access_token = st.session_state["access_token"]
@@ -30,7 +31,7 @@ if st.checkbox("🔍 Show Raw Insights"):
 if st.button("🔧 Run Code Replacement"):
     try:
         with st.spinner("📦 Updating pom.xml with latest dependency versions..."):
-            update_pom_with_latest_versions(pom_path, insights)
+            update_pom_with_latest_versions(pom_path, dependencies)
             st.success("📦 pom.xml updated with latest dependency versions.")
         dspy_chain = get_replacement_llm()
         with st.spinner("🧠 Rewriting Java code based on insights..."):

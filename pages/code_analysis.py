@@ -71,6 +71,7 @@ if st.button("🚀 Run Dependency Analysis"):
         st.session_state["insights"] = insights
         st.session_state["github_url"] = github_url
         st.session_state["access_token"] = access_token
+        st.session_state["dependencies"] = dependencies
 
         st.success("✅ Analysis complete. Proceed to the next step below.")
         os.chdir(original_cwd)
