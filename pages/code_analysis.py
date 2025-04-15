@@ -1,3 +1,4 @@
+import mlflow
 import os
 from pathlib import Path
 import shutil
@@ -18,8 +19,14 @@ st.markdown("Analyze and modernize your Java project with AI-powered insights.")
 github_url = st.text_input("🔗 GitHub Repository URL")
 access_token = st.text_input("🔐 GitHub Access Token (optional if public)", type="password")
 
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("Migration to new agentic flow")
+
 if st.button("🚀 Run Dependency Analysis"):
     try:
+        with mlflow.start_run(run_name="Dependency Analysis"):
+            mlflow.log_param("Analaysis begin", st.session_state)   
+
         with st.spinner("⏳ Cloning repository..."):
             temp_dir = Path(tempfile.mkdtemp())  # e.g., C:\Users\<you>\AppData\Local\Temp\...
             repo_path = temp_dir / "repo"
@@ -74,8 +81,10 @@ if st.button("🚀 Run Dependency Analysis"):
         st.session_state["dependencies"] = dependencies
 
         st.success("✅ Analysis complete. Proceed to the next step below.")
+        mlflow.log_param("Analaysis completed", st.session_state)
         os.chdir(original_cwd)
         st.page_link("pages/code_replacement.py", label="➡️ Continue to Code Replacement")
 
     except Exception as e:
         st.error(f"❌ Something went wrong: {e}")
+        mlflow.log_param("Error", e)
