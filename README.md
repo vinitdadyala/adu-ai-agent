@@ -26,6 +26,8 @@ pytest --cov=utils_git --cov-report=term-missing utils_git_test.py -v
 ```
 ## Application Overview
 
+![image](https://github.com/user-attachments/assets/ddb45a44-189e-4485-9ec6-33787e253c0f)
+
 ![image](https://github.com/user-attachments/assets/75eea749-9ee8-4c48-b1ff-cd56dea04bce)
 
 <img width="1511" alt="image" src="https://github.com/user-attachments/assets/d038f755-8371-45db-9364-3276ee693a70" />
