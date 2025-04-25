@@ -4,8 +4,18 @@
 Follow this [Setup Guide](https://github.com/vinitdadyala/adu-ai-agent/blob/main/SETUP.md).
 
 ---
+## 1. `MLFLOW` 
+### **Start MLFLOW server for experiments**
+#### This step is mandatory before step 2
+```sh
+mlflow server --host 127.0.0.1 --port 5000
+```
+### **Start MLFLOW Local tracking**
+```sh
+mlflow ui --port 5001
+```
 
-## 1. `home.py`  
+## 2. `home.py`  
 Accepts Github Url details and parses a `pom.xml` file under the root level of the repo to give a detailed analysis report
 
 ### **Run the script**:
@@ -13,7 +23,7 @@ Accepts Github Url details and parses a `pom.xml` file under the root level of t
 streamlit run home.py
 ```
 
-## 2. `Runnning the Unit tests`  
+## 3. `Runnning the Unit tests`  
 As of now, functions under `utils.py` are covered
 
 ### **Run the tests**:
@@ -25,15 +35,6 @@ pytest utils_git_test.py -v -k "test_create_pull_request"
 pytest --cov=utils_git --cov-report=term-missing utils_git_test.py -v
 ```
 
-## 3. `MLFLOW` 
-### **Start MLFLOW server for experiments**
-```sh
-mlflow server --host 127.0.0.1 --port 5000
-```
-### **Start MLFLOW Local tracking**
-```sh
-mlflow ui --port 5001
-```
 
 ## 4. Application Overview
 
