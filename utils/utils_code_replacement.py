@@ -5,6 +5,8 @@ import streamlit as st
 from tavily import TavilyClient
 import dspy
 import xml.etree.ElementTree as ET
+import shutil
+from pathlib import Path
 
 # --- SETUP ---
 groq_api_key = os.getenv("GROQ_API_KEY_NEW")
@@ -140,9 +142,17 @@ import stat
 def update_pom_with_latest_versions(pom_path, dependencies):
     ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
     ET.register_namespace('', ns['m'])
+    pom_path = Path(pom_path)
+
+    # Create temp file for safe writing
+    temp_pom = pom_path.parent / f"{pom_path.stem}_temp{pom_path.suffix}"
+    backup_pom = pom_path.parent / f"{pom_path.stem}_backup{pom_path.suffix}"
 
     try:
-        os.chmod(pom_path, stat.S_IWRITE)
+        # Create backup
+        shutil.copy2(pom_path, backup_pom)
+        
+        # Parse and update XML
         tree = ET.parse(pom_path)
         root = tree.getroot()
         updated = False
