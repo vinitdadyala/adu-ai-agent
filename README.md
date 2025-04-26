@@ -15,12 +15,12 @@ mlflow server --host 127.0.0.1 --port 5000
 mlflow ui --port 5001
 ```
 
-## 2. `home.py`  
+## 2. `hommaine.py`  
 Accepts Github Url details and parses a `pom.xml` file under the root level of the repo to give a detailed analysis report
 
 ### **Run the script**:
 ```sh
-streamlit run home.py
+streamlit run src/main.py
 ```
 
 ## 3. `Runnning the Unit tests`  
