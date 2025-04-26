@@ -6,8 +6,7 @@ import subprocess
 import tempfile
 import streamlit as st
 from utils.utils import parse_pom, fetch_latest_versions, dependencies_to_dataframe, find_pom_file
-from utils.utils_git import clone_github_repo, generate_branch_name, commit_and_push_changes, create_pull_request, parse_github_url
-from utils.utils_git import parse_github_url
+from utils.git_utils import clone_github_repo, generate_branch_name, commit_and_push_changes, create_pull_request, parse_github_url
 from utils.utils_code_analysis import analyze_dependencies  # Your DSPy Groq chain
 from utils.utils_code_replacement import analyze_and_replace, analyze_project_code, get_replacement_llm, normalize_insights, update_pom_with_latest_versions
 
@@ -23,7 +22,7 @@ access_token = st.text_input("🔐 GitHub Access Token (optional if public)", ty
 mlflow.set_tracking_uri("http://localhost:5000")
 mlflow.set_experiment("Migration to new agentic flow")
 
-if st.button("🚀 Run Dependency Analysis"):
+if st.button("🚀 Run Dependency Analysis and Replace Code"):
     try:
         with mlflow.start_run(run_name="Dependency Analysis"):
             mlflow.log_param("Analaysis begin", st.session_state)   
@@ -85,21 +84,10 @@ if st.button("🚀 Run Dependency Analysis"):
         mlflow.log_param("Analaysis completed", st.session_state)
         os.chdir(original_cwd)
 
-        # repo_path = st.session_state["repo_path"]
-        # insights = st.session_state["insights"]
-        # dependencies = st.session_state["dependencies"]
-        # branch_name = st.session_state["branch_name"]
-        # github_url = st.session_state["github_url"]
-        # access_token = st.session_state["access_token"]
         insights = normalize_insights(insights)
         pom_path=find_pom_file(repo_path)
 
-
-        # if st.checkbox("🔍 Show Raw Insights"):
-        #     st.json(insights)
-
-        # if st.button("🔧 Run Code Replacement"):
-        #     try:
+        # --- REPLACEMENT ---
         with st.spinner("📦 Updating pom.xml with latest dependency versions..."):
             update_pom_with_latest_versions(pom_path, dependencies)
             st.success("📦 pom.xml updated with latest dependency versions.")

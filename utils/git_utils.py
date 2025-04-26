@@ -5,7 +5,6 @@ import time
 from git import Repo
 import shutil
 import requests
-import stat
 # Parse GitHub URL
 def parse_github_url(github_url: str) -> tuple[str, str]:
     """
