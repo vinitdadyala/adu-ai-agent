@@ -13,6 +13,17 @@ from agents.code_replacement import CodeReplacementAgent
 st.session_state.clear()
 
 st.set_page_config(page_title="Java Auto-Upgrader", layout="wide")
+
+# Sidebar configuration
+with st.sidebar:
+    st.title("⚙️ Configuration")
+    github_url = st.text_input("🔗 GitHub Repository URL")
+    access_token = st.text_input("🔐 GitHub Access Token (optional if public)", type="password")
+    st.divider()
+    st.markdown("### About")
+    st.markdown("This tool automatically analyzes and upgrades Java dependencies while ensuring code compatibility.")
+
+# Main area title
 st.title("🚀 Java Dependency & Code Auto-Upgrader")
 
 # Initialize agents
@@ -20,10 +31,6 @@ if 'dependency_agent' not in st.session_state:
     st.session_state['dependency_agent'] = DependencyAnalysisAgent()
 if 'code_agent' not in st.session_state:
     st.session_state['code_agent'] = CodeReplacementAgent()
-
-# --- INPUTS ---
-github_url = st.text_input("🔗 GitHub Repository URL")
-access_token = st.text_input("🔐 GitHub Access Token (optional if public)", type="password")
 
 mlflow.set_tracking_uri("http://localhost:5000")
 mlflow.set_experiment("Java Dependency Upgrade Analysis")
