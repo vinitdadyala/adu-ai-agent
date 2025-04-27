@@ -72,6 +72,9 @@ pytest --cov=utils_git --cov-report=term-missing utils_git_test.py -v
 
 ## 4. Application Overview
 
+We have 2 agents seamlessly working in our workflow: DependencyAnalysisAgent and CodeReplacementAgent
+![image](https://github.com/user-attachments/assets/7e92eb17-7cc0-4085-8a72-c1891b3d9e77)
+
 ![image](https://github.com/user-attachments/assets/ddb45a44-189e-4485-9ec6-33787e253c0f)
 
 ![image](https://github.com/user-attachments/assets/75eea749-9ee8-4c48-b1ff-cd56dea04bce)
