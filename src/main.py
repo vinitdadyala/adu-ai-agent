@@ -6,8 +6,8 @@ import subprocess
 import tempfile
 from utils.utils import parse_pom, fetch_latest_versions, dependencies_to_dataframe, find_pom_file
 from utils.git_utils import clone_github_repo, generate_branch_name, commit_and_push_changes, create_pull_request, parse_github_url
-from utils.utils_code_analysis import DependencyAnalysisAgent
-from utils.utils_code_replacement import CodeReplacementAgent
+from agents.code_analysis import DependencyAnalysisAgent
+from agents.code_replacement import CodeReplacementAgent
 
 st.session_state.clear()
 
