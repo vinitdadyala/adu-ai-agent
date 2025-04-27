@@ -1,3 +1,37 @@
+# Java Dependency & Code Auto-Upgrader
+
+Java Dependency & Code Auto-Upgrader (ADU-AI-Agent) is a sophisticated MLOps-enabled tool built with Python that automates the process of analyzing and upgrading Java dependencies in Maven projects. 
+
+## Technical Overview
+
+### 1. Architecture & Core Technologies
+- **Frontend**: Streamlit-based web interface
+- **Backend**: Python with MLflow for experiment tracking and monitoring
+- **AI Integration**: DSPy framework with Groq LLM for dependency analysis
+- **Version Control**: Git integration for automated PR creation
+
+### 2. Key Capabilities
+- Automated POM file parsing and dependency version analysis
+- Security vulnerability assessment
+- Deprecated method detection
+- Intelligent code modification suggestions
+- Automated pull request generation with suggested updates
+
+### 3. MLOps Features
+- Experiment tracking via MLflow
+- Metrics and parameter logging
+- Run history and artifact storage
+- Performance monitoring
+
+### 4. Infrastructure
+- Local MLflow server for experiment tracking (port 5000)
+- MLflow UI for visualization (port 5001)
+- Streamlit server for web interface
+
+The system employs a modular architecture with separate agents for dependency analysis and code replacement, backed by comprehensive unit testing and version control integration.
+
+---
+
 # Usage
 
 ### Pre-requisites  
