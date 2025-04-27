@@ -4,16 +4,21 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
-import streamlit as st
 from utils.utils import parse_pom, fetch_latest_versions, dependencies_to_dataframe, find_pom_file
 from utils.git_utils import clone_github_repo, generate_branch_name, commit_and_push_changes, create_pull_request, parse_github_url
-from utils.utils_code_analysis import analyze_dependencies  # Your DSPy Groq chain
-from utils.utils_code_replacement import analyze_and_replace, analyze_project_code, get_replacement_llm, normalize_insights, update_pom_with_latest_versions
+from utils.utils_code_analysis import DependencyAnalysisAgent
+from utils.utils_code_replacement import CodeReplacementAgent
 
 st.session_state.clear()
 
 st.set_page_config(page_title="Java Auto-Upgrader", layout="wide")
 st.title("🚀 Java Dependency & Code Auto-Upgrader")
+
+# Initialize agents
+if 'dependency_agent' not in st.session_state:
+    st.session_state['dependency_agent'] = DependencyAnalysisAgent()
+if 'code_agent' not in st.session_state:
+    st.session_state['code_agent'] = CodeReplacementAgent()
 
 # --- INPUTS ---
 github_url = st.text_input("🔗 GitHub Repository URL")
@@ -25,10 +30,10 @@ mlflow.set_experiment("Migration to new agentic flow")
 if st.button("🚀 Run Dependency Analysis and Replace Code"):
     try:
         with mlflow.start_run(run_name="Dependency Analysis"):
-            mlflow.log_param("Analaysis begin", st.session_state)   
+            mlflow.log_param("Analysis begin", st.session_state)   
 
         with st.spinner("⏳ Cloning repository..."):
-            temp_dir = Path(tempfile.mkdtemp())  # e.g., C:\Users\<you>\AppData\Local\Temp\...
+            temp_dir = Path(tempfile.mkdtemp())
             repo_path = temp_dir / "repo"
             repo_path = Path(clone_github_repo(github_url, str(repo_path), access_token))
             st.write(f"✅ Repo cloned at: `{repo_path}`")
@@ -42,11 +47,7 @@ if st.button("🚀 Run Dependency Analysis and Replace Code"):
             st.info(f"✅ Switched to new branch: `{branch_name}`")
 
         with st.spinner("📄 Parsing pom.xml..."):
-            pom_path = None
-            for root, _, files in os.walk(repo_path):
-                if "pom.xml" in files:
-                    pom_path = os.path.join(root, "pom.xml")
-                    break
+            pom_path = find_pom_file(repo_path)
             if not pom_path:
                 st.error("❌ `pom.xml` not found.")
                 st.stop()
@@ -58,7 +59,7 @@ if st.button("🚀 Run Dependency Analysis and Replace Code"):
         st.dataframe(dependencies_to_dataframe(dependencies))
 
         with st.spinner("🧠 Analyzing with DSPy (Groq)..."):
-            insights = analyze_dependencies(dependencies)
+            insights = st.session_state['dependency_agent'].analyze_dependencies(dependencies)
             st.success("Dependency insights generated ✅")
 
         st.markdown("### 📊 Dependency Insights")
@@ -80,20 +81,19 @@ if st.button("🚀 Run Dependency Analysis and Replace Code"):
         st.session_state["access_token"] = access_token
         st.session_state["dependencies"] = dependencies
 
-        st.success("✅ Analysis complete. Proceed to the next step below.")
-        mlflow.log_param("Analaysis completed", st.session_state)
+        st.success("✅ Analysis complete. Proceeding with code updates...")
+        mlflow.log_param("Analysis completed", st.session_state)
         os.chdir(original_cwd)
 
-        insights = normalize_insights(insights)
-        pom_path=find_pom_file(repo_path)
+        insights = st.session_state['code_agent'].normalize_insights(insights)
 
         # --- REPLACEMENT ---
         with st.spinner("📦 Updating pom.xml with latest dependency versions..."):
-            update_pom_with_latest_versions(pom_path, dependencies)
+            st.session_state['code_agent'].update_pom_with_latest_versions(pom_path, dependencies)
             st.success("📦 pom.xml updated with latest dependency versions.")
-        dspy_chain = get_replacement_llm()
+
         with st.spinner("🧠 Rewriting Java code based on insights..."):
-            result_summary = analyze_project_code(repo_path, insights)
+            result_summary = st.session_state['code_agent'].analyze_project_code(repo_path, insights)
             st.success(f"✅ Java source code updated. {len(result_summary)} files modified.")
 
             if result_summary:
@@ -124,3 +124,7 @@ if st.button("🚀 Run Dependency Analysis and Replace Code"):
     except Exception as e:
         st.error(f"❌ Something went wrong: {e}")
         mlflow.log_param("Error", e)
+    finally:
+        # Cleanup
+        st.session_state['dependency_agent'].cleanup()
+        st.session_state['code_agent'].cleanup()
