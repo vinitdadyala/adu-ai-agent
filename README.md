@@ -4,18 +4,18 @@
 Follow this [Setup Guide](https://github.com/vinitdadyala/adu-ai-agent/blob/main/SETUP.md).
 
 ---
-## 1. `MLFLOW` 
-### **Start MLFLOW server for experiments**
-#### This step is mandatory before step 2
-```sh
-mlflow server --host 127.0.0.1 --port 5000
-```
+## 1. `Start MLflow for Tracking, experimentation and evaluation` [MANDATORY step]
+
 ### **Start MLFLOW Local tracking**
 ```sh
 mlflow ui --port 5001
 ```
+### **Start MLFLOW server for experiments**
+```sh
+mlflow server --host 127.0.0.1 --port 5000
+```
 
-## 2. `hommaine.py`  
+## 2. `Starting the UI`  
 Accepts Github Url details and parses a `pom.xml` file under the root level of the repo to give a detailed analysis report
 
 ### **Run the script**:
