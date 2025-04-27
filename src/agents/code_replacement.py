@@ -3,6 +3,8 @@ import stat
 import re
 import streamlit as st
 import dspy
+import mlflow
+import time
 import xml.etree.ElementTree as ET
 import shutil
 from pathlib import Path
@@ -68,6 +70,14 @@ class CodeReplacementAgent:
     def analyze_and_replace(self, file_path, code, code_tasks):
         modified_code = code
         applied_tasks = []
+        start_time = time.time()
+        
+        # Generate a unique run ID for this file analysis
+        file_run_id = f"file_{time.time_ns()}"
+        
+        # Use unique parameter names for each file
+        mlflow.log_param(f"{file_run_id}_analyzing_file", os.path.basename(file_path))
+        mlflow.log_metric(f"{file_run_id}_initial_file_size", len(code))
 
         for dep, tasks in code_tasks.items():
             for task in tasks:
@@ -99,21 +109,38 @@ Instructions:
                         if result.replacement_code != modified_code:
                             applied_tasks.append(f"[{dep}] {task}")
                             modified_code = result.replacement_code
+                            mlflow.log_param(f"{file_run_id}_applied_change_{dep}", task)
+                            mlflow.log_metric(f"{file_run_id}_changes_applied_{dep}", 1)
                     else:
                         applied_tasks.append(f"[{dep}] {task} - No code change applied.")
-                        st.warning(f"Unexpected response structure or no change required: {result}")
+                        mlflow.log_param(f"{file_run_id}_skipped_change_{dep}", task)
+                        mlflow.log_metric(f"{file_run_id}_changes_skipped_{dep}", 1)
                 except Exception as e:
                     st.warning(f"Error analyzing {file_path} with task '{task}': {e}")
+                    mlflow.log_param(f"{file_run_id}_error", str(e))
+        
+        analysis_time = time.time() - start_time
+        mlflow.log_metric(f"{file_run_id}_analysis_time", analysis_time)
+        mlflow.log_metric(f"{file_run_id}_final_file_size", len(modified_code))
         return modified_code, applied_tasks
 
     def analyze_project_code(self, project_path, insights):
+        start_time = time.time()
         code_tasks = self.get_code_change_tasks(insights)
         java_files = self.find_java_files(project_path)
         summary = {}
 
+        mlflow.log_metric("total_java_files", len(java_files))
+        mlflow.log_param("code_tasks", str(code_tasks)[:250])  # Log first 250 chars of tasks
+
+        files_modified = 0
+        total_changes = 0
+        total_lines_changed = 0
+
         for file_path in java_files:
             with open(file_path, "r") as f:
                 original_code = f.read()
+                original_lines = len(original_code.splitlines())
 
             modified_code, applied_tasks = self.analyze_and_replace(file_path, original_code, code_tasks)
 
@@ -121,10 +148,26 @@ Instructions:
                 with open(file_path, "w") as f:
                     f.write(modified_code)
                 summary[file_path] = applied_tasks
+                files_modified += 1
+                total_changes += len(applied_tasks)
+                
+                # Calculate lines changed
+                new_lines = len(modified_code.splitlines())
+                lines_diff = abs(new_lines - original_lines)
+                total_lines_changed += lines_diff
+                
+                mlflow.log_metric(f"lines_changed_{os.path.basename(file_path)}", lines_diff)
 
+        # Log summary metrics
+        mlflow.log_metric("files_modified", files_modified)
+        mlflow.log_metric("total_code_changes", total_changes)
+        mlflow.log_metric("total_lines_changed", total_lines_changed)
+        mlflow.log_metric("code_analysis_time", time.time() - start_time)
+        
         return summary
 
     def update_pom_with_latest_versions(self, pom_path, dependencies):
+        start_time = time.time()
         ns = {'m': 'http://maven.apache.org/POM/4.0.0'}
         ET.register_namespace('', ns['m'])
         pom_path = Path(pom_path)
@@ -137,6 +180,8 @@ Instructions:
             tree = ET.parse(pom_path)
             root = tree.getroot()
             updated = False
+            deps_updated = 0
+            version_changes = []
 
             for artifact_id, dep_info in dependencies.items():
                 group_id = dep_info.get("group_id")
@@ -149,21 +194,30 @@ Instructions:
 
                     if g is not None and a is not None and v is not None:
                         if g.text == group_id and a.text == artifact_id and v.text != latest_version:
-                            st.text(f"🔄 Updating {group_id}:{artifact_id} from {v.text} to {latest_version}")
+                            current_version = v.text
                             v.text = latest_version
                             updated = True
+                            deps_updated += 1
+                            version_changes.append(f"{artifact_id}: {current_version} -> {latest_version}")
+                            mlflow.log_param(f"pom_update_{artifact_id}", f"{current_version} -> {latest_version}")
 
             if updated:
                 tree.write(pom_path, encoding="utf-8", xml_declaration=True)
                 st.success(f"✅ pom.xml updated and saved to {pom_path}")
+                mlflow.log_param("pom_version_changes", str(version_changes))
             else:
                 st.info("ℹ️ No updates needed in pom.xml")
 
+            mlflow.log_metric("dependencies_updated_in_pom", deps_updated)
+            mlflow.log_metric("pom_update_time", time.time() - start_time)
+
         except Exception as e:
             st.error(f"❌ Error updating pom.xml: {e}")
+            mlflow.log_param("pom_update_error", str(e))
 
     def cleanup(self):
         if "replacement_chain" in st.session_state:
             del st.session_state["replacement_chain"]
+            mlflow.log_param("cleanup_status", "success")
 
 
