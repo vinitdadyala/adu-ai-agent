@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor User
+    participant UI as Streamlit UI
+    participant DA as Dependency Agent
+    participant CA as Code Agent
+    participant Git
+    participant GitHub
+
+    User->>UI: Input GitHub URL & Token
+    UI->>Git: Clone Repository
+    Git-->>UI: Repository Cloned
+    
+    UI->>DA: Analyze Dependencies
+    DA->>DA: Parse pom.xml
+    DA->>DA: Fetch Latest Versions
+    DA-->>UI: Dependency Analysis Results
+    
+    UI->>CA: Update Code
+    CA->>CA: Analyze Code Changes
+    CA->>CA: Apply Updates
+    CA-->>UI: Code Changes
+    
+    UI->>Git: Commit Changes
+    Git->>GitHub: Push Changes
+    GitHub-->>Git: Changes Pushed
+    Git->>GitHub: Create PR
+    GitHub-->>UI: PR URL
+    UI-->>User: Display Results
