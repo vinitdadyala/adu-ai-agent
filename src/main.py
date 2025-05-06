@@ -16,13 +16,23 @@ st.set_page_config(page_title="Java Auto-Upgrader", layout="wide")
 
 # Sidebar configuration
 with st.sidebar:
-    st.title("⚙️ Configuration")
+    st.divider()
     github_url = st.text_input("🔗 GitHub Repository URL")
     access_token = st.text_input("🔐 GitHub Access Token (optional if public)", type="password")
     st.divider()
-    st.markdown("### About")
-    st.markdown("This tool automatically analyzes and upgrades Java dependencies while ensuring code compatibility.")
-
+    with st.expander("ℹ️ About", expanded=False):
+        st.markdown("""
+        ### Java Dependency Upgrader
+        
+        This tool helps you:
+        - 🔍 Analyze dependencies
+        - ⬆️ Upgrade to latest versions
+        - 🔧 Fix compatibility issues
+        - 🤖 Auto-generate PRs
+        
+        [Documentation](https://github.com/vinitdadyala/adu-ai-agent?tab=readme-ov-file#java-dependency--code-auto-upgrader-)
+        """)
+   
 # Main area title
 st.title("🚀 Java Dependency & Code Auto-Upgrader")
 
@@ -43,14 +53,15 @@ if st.button("🚀 Run Dependency Analysis and Replace Code"):
                 # Log parent run parameters
                 mlflow.log_param("github_url", github_url)
                 mlflow.log_param("has_access_token", bool(access_token))
-
+                
+                st.markdown("## 1. Dependency Analysis")
                 with st.spinner("⏳ Cloning repository..."):
                     temp_dir = Path(tempfile.mkdtemp())
                     repo_path = temp_dir / "repo"
                     repo_path = Path(clone_github_repo(github_url, str(repo_path), access_token))
                     mlflow.log_param("repo_path", str(repo_path))
-                    st.write(f"✅ Repo cloned at: `{repo_path}`")
-                    st.write("📁 Files at root:", os.listdir(repo_path))
+                    st.info(f"✅ Repo cloned at: `{repo_path}`")
+                    # st.write("📁 Files at root:", os.listdir(repo_path))
                     original_cwd = os.getcwd()
                     os.chdir(repo_path)
 
@@ -79,7 +90,6 @@ if st.button("🚀 Run Dependency Analysis and Replace Code"):
                     with st.spinner("🧠 Analyzing with DSPy (Groq)..."):
                         insights = st.session_state['dependency_agent'].analyze_dependencies(dependencies)
                         mlflow.log_param("analysis_insights", str(insights)[:250])
-                        st.success("Dependency insights generated ✅")
 
                 # Display insights
                 st.markdown("### 📊 Dependency Insights")
@@ -103,7 +113,7 @@ if st.button("🚀 Run Dependency Analysis and Replace Code"):
                     "dependencies": dependencies
                 })
 
-                st.success("✅ Analysis complete. Proceeding with code updates...")
+                st.markdown("## 2. Code replacement")
                 os.chdir(original_cwd)
 
                 # Code Replacement Phase
@@ -112,12 +122,12 @@ if st.button("🚀 Run Dependency Analysis and Replace Code"):
 
                     with st.spinner("📦 Updating pom.xml with latest dependency versions..."):
                         st.session_state['code_agent'].update_pom_with_latest_versions(pom_path, dependencies)
-                        st.success("📦 pom.xml updated with latest dependency versions.")
+                        st.info("📦 pom.xml updated with latest dependency versions.")
 
                     with st.spinner("🧠 Rewriting Java code based on insights..."):
                         result_summary = st.session_state['code_agent'].analyze_project_code(repo_path, insights)
                         mlflow.log_metric("files_modified", len(result_summary) if result_summary else 0)
-                        st.success(f"✅ Java source code updated. {len(result_summary)} files modified.")
+                        st.info(f"✅ Java source code updated. {len(result_summary)} files modified.")
 
                         if result_summary:
                             st.subheader("🪄 Files Modified")

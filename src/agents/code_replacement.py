@@ -203,7 +203,7 @@ Instructions:
 
             if updated:
                 tree.write(pom_path, encoding="utf-8", xml_declaration=True)
-                st.success(f"✅ pom.xml updated and saved to {pom_path}")
+                st.info(f"✅ pom.xml updated and saved to {pom_path}")
                 mlflow.log_param("pom_version_changes", str(version_changes))
             else:
                 st.info("ℹ️ No updates needed in pom.xml")
