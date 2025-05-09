@@ -16,6 +16,7 @@ st.set_page_config(page_title="Java Auto-Upgrader", layout="wide")
 
 # Sidebar configuration
 with st.sidebar:
+    st.image("assets/logo.png", width=300)
     st.divider()
     github_url = st.text_input("🔗 GitHub Repository URL")
     access_token = st.text_input("🔐 GitHub Access Token (optional if public)", type="password")
